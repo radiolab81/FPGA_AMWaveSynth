@@ -24,7 +24,7 @@ Total PLLs	0 / 2 ( 0 % )
 ```
 
 Estimation: 
-- 12-13 channels on rock-old EP2C5 without techniques such as time multiplexing are no problem, 16-24 AM stations using time-multiplexing without special tricks, with further optimizations, of course, even more
+- 12-13 channels on ancient EP2C5 without techniques such as time multiplexing are no problem, 16-24 AM stations using time-multiplexing without special tricks, with further optimizations, of course, even more
 
 - Contemporary FPGAs in the hobby sector such as Tang Nano 25k, 50-60 AM stations without effort, using time-multiplexing 200+ AM stations, more than a complete long- and medium-wave band together!
 
