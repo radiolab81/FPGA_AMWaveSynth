@@ -6,7 +6,7 @@
  * TAKTKONZEPT:
  * - clk: 50 MHz (Physischer FPGA-Takt)
  * - sample_en: 10 MHz (Logischer Takt / Enable-Puls alle 5 Zyklen)
- * - DAC-Rate: 10 MSPS (Jedes Sample steht für 100ns stabil am R2R-Ausgang)
+ * - DAC-Rate: 10 MSPS (Jedes Sample steht für 100ns stabil am DAC/R2R-Ausgang)
  */
 
 module am_modulator_top #(
@@ -23,6 +23,8 @@ module am_modulator_top #(
     // DAC/R2R-DAC Ausgangspins
     output reg signed [OUT_BITS-1:0] dac_out
 );
+    // für den Fall, dass RST auf dem Board invertiert ist 
+    wire sys_rst = !rst; // sys_rst ist jetzt 1, wenn der Taster GEDRÜCKT wird
 
     // ----------------------------------------------------
     // 1. TAKT-GENERATOR (ENABLE-PULS)
@@ -33,7 +35,7 @@ module am_modulator_top #(
     assign sample_en_out = sample_en; //  Den internen Puls zuweisen  <- sample_en nach draußen debuggen
 
     always @(posedge clk) begin
-        if (rst) clk_div <= 0; 
+        if (sys_rst) clk_div <= 0; 
         else clk_div <= (sample_en) ? 3'd0 : clk_div + 3'd1; // sample_en HIGH, dann clk_div auf 0, sonst clk_div inkrementieren [ 1x Arbeitstakt, 4 Leertakte  = 5 Takte ]
     end
 
@@ -45,7 +47,7 @@ module am_modulator_top #(
     wire [7:0] w_aud0, w_aud1, w_aud2, w_aud3;
 
     audio_rx rx_inst (
-        .clk(clk), .rst(rst), .data_in(data_in), .data_en(data_en),
+        .clk(clk), .rst(sys_rst), .data_in(data_in), .data_en(data_en),
         .ch0(w_aud0), .ch1(w_aud1), .ch2(w_aud2), .ch3(w_aud3)
     );
 
@@ -80,22 +82,22 @@ module am_modulator_top #(
     wire signed [15:0] s0, s1, s2, s3;
 
     // Kanal 0: 603 kHz
-    nco nco0 (.clk(clk), .rst(rst), .en(sample_en), .rf_out(s0), 
+    nco nco0 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s0), 
               .audio_in(w_aud0), .phase_inc(32'h0F70_0020), .ext_gain(16'd256),
               .phase_out(addr0), .sine_val_in(sine_val0));
 
     // Kanal 1: 756 kHz
-    nco nco1 (.clk(clk), .rst(rst), .en(sample_en), .rf_out(s1), 
+    nco nco1 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s1), 
               .audio_in(w_aud1), .phase_inc(32'h1359_196B), .ext_gain(16'd256),
               .phase_out(addr1), .sine_val_in(sine_val1));
 
     // Kanal 2: 999 kHz
-    nco nco2 (.clk(clk), .rst(rst), .en(sample_en), .rf_out(s2), 
+    nco nco2 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s2), 
               .audio_in(w_aud2), .phase_inc(32'h1993_4566), .ext_gain(16'd256),
               .phase_out(addr2), .sine_val_in(sine_val2));
 
     // Kanal 3: 1440 kHz
-    nco nco3 (.clk(clk), .rst(rst), .en(sample_en), .rf_out(s3), 
+    nco nco3 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s3), 
               .audio_in(w_aud3), .phase_inc(32'h24DD_2F1B), .ext_gain(16'd256),
               .phase_out(addr3), .sine_val_in(sine_val3));
 
@@ -109,7 +111,7 @@ module am_modulator_top #(
     /* verilator lint_on UNUSEDSIGNAL */
 
     always @(posedge clk) begin
-        if (rst) begin
+        if (sys_rst) begin
             sum_stage1_a <= 0; sum_stage1_b <= 0;
             sum_stage2   <= 0; dac_out      <= 0;
         end else if (sample_en) begin 
