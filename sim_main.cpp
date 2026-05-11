@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
 
     // Audio Empfänger bereitstellen:
-    uint8_t packet_buffer[4]; // Platz für 4 Audio-Kanäle
+    uint8_t packet_buffer[10]; // Platz für 4 Audio-Kanäle
     uint64_t sim_time = 0;
 
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -60,14 +60,17 @@ int main(int argc, char** argv) {
     std::ofstream dac_file("dac_output.csv"); // DAC Ausgangssignal für FFT in GNU Octave
 
     top->clk = 0;
-    top->rst = 1;
+    //top->rst = 1;
+    top->rst = 0; // unser Dev-Board nutzt einen inv. Reset.
+
 
     std::cout << "Starte Simulation mit VCD-Export..." << std::endl;
 
     // Hauptschleife der Simulation
     for (int i = 0; i < 1000000; i++) {
         // Reset nach 40 Ticks lösen
-        if (i == 40) top->rst = 0;
+        //if (i == 40) top->rst = 0;
+         if (i == 40) top->rst = 1; // unser Dev-Board nutzt einen inv. Reset.
 
         // 1. Schauen, ob Audio-Daten da sind   
         // ffmpeg -re -i deine_musik.mp3 \
@@ -77,9 +80,9 @@ int main(int argc, char** argv) {
         socklen_t len = sizeof(cliaddr);
         
         // MSG_DONTWAIT sorgt dafür, dass wir nicht blockieren, wenn kein Paket da ist
-        int n = recvfrom(sockfd, packet_buffer, 4, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
+        int n = recvfrom(sockfd, packet_buffer, 10, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
         
-        if (n == 4) { // Wir haben ein Sample-Set für alle(!) 4 Kanäle!
+        if (n == 10) { // Wir haben ein Sample-Set für alle(!) 4 Kanäle!
             static int p_count = 0;
             if (p_count++ % 1000 == 0) printf("Audio-Paket erhalten! (Gesamt: %d)\n", p_count);
 
@@ -91,6 +94,12 @@ int main(int argc, char** argv) {
             send_to_fpga(top, packet_buffer[1], sim_time, tfp);
             send_to_fpga(top, packet_buffer[2], sim_time, tfp);
             send_to_fpga(top, packet_buffer[3], sim_time, tfp);
+            send_to_fpga(top, packet_buffer[4], sim_time, tfp);
+            send_to_fpga(top, packet_buffer[5], sim_time, tfp);
+            send_to_fpga(top, packet_buffer[6], sim_time, tfp);
+            send_to_fpga(top, packet_buffer[7], sim_time, tfp);
+            send_to_fpga(top, packet_buffer[8], sim_time, tfp);
+            send_to_fpga(top, packet_buffer[9], sim_time, tfp);
         }
 
         // --- Normaler Systemtakt (50 MHz Domäne) ---
