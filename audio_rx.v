@@ -8,15 +8,14 @@
 module audio_rx (
     input wire clk,
     input wire rst,
-    input wire [7:0] data_in,   // 8-Bit Bus vom ESP32
-    input wire data_en,         // Strobe/Enable Puls vom ESP32
+    input wire [7:0] data_in,   // 8-Bit Bus von MCU
+    input wire data_en,         // Strobe/Enable Puls von MCU
     
     // Parallele Ausgänge für die Modulatoren
     output reg [7:0] ch0,
     output reg [7:0] ch1,
     output reg [7:0] ch2,
     output reg [7:0] ch3,
-    // ERWEITERUNG: Neue Ausgänge
     output reg [7:0] ch4,
     output reg [7:0] ch5,
     output reg [7:0] ch6,
@@ -26,7 +25,6 @@ module audio_rx (
 );
 
     // Zustandsdefinitionen
-    // ERWEITERUNG: Zustände für CH4 bis CH9 hinzugefügt
     localparam S_IDLE = 4'd0, S_U = 4'd1, S_D = 4'd2, 
                S_CH0  = 4'd3, S_CH1 = 4'd4, S_CH2 = 4'd5, S_CH3 = 4'd6,
                S_CH4  = 4'd7, S_CH5 = 4'd8, S_CH6 = 4'd9, S_CH7 = 4'd10,
@@ -53,13 +51,13 @@ module audio_rx (
                     S_CH0:  begin ch0 <= data_in; state <= S_CH1; end
                     S_CH1:  begin ch1 <= data_in; state <= S_CH2; end
                     S_CH2:  begin ch2 <= data_in; state <= S_CH3; end
-                    S_CH3:  begin ch3 <= data_in; state <= S_CH4; end // ERWEITERUNG: Kette geht weiter
+                    S_CH3:  begin ch3 <= data_in; state <= S_CH4; end
                     S_CH4:  begin ch4 <= data_in; state <= S_CH5; end
                     S_CH5:  begin ch5 <= data_in; state <= S_CH6; end
                     S_CH6:  begin ch6 <= data_in; state <= S_CH7; end
                     S_CH7:  begin ch7 <= data_in; state <= S_CH8; end
                     S_CH8:  begin ch8 <= data_in; state <= S_CH9; end
-                    S_CH9:  begin ch9 <= data_in; state <= S_IDLE; end // Ende der Kette
+                    S_CH9:  begin ch9 <= data_in; state <= S_IDLE; end
                     default: state <= S_IDLE;
                 endcase
             end

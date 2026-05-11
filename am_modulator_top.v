@@ -1,8 +1,7 @@
 /*
  * PROJEKT: Multi-Kanal AM-Modulator
  * ----------------------------------------------------
- * Dieses Modul führt 4 AM-Sender zusammen. 
- * // ERWEITERUNG: Jetzt auf insgesamt 10 AM-Sender ausgebaut!
+ * Dieses Modul führt 10 AM-Sender zusammen. 
  * Nutzt Shared-Dual-Port-ROMs für die NCOs.
  * TAKTKONZEPT:
  * - clk: 50 MHz (Physischer FPGA-Takt)
@@ -46,14 +45,11 @@ module am_modulator_top #(
     // Dieses Modul empfängt das [A][U][D][CH1][CH2][CH3][CH4] Protokoll
     // ERWEITERUNG: Nimmt jetzt auch CH5 bis CH10 entgegen
 
-    wire [7:0] w_aud0, w_aud1, w_aud2, w_aud3;
-    // ERWEITERUNG: Wires für die 6 neuen Audiokanäle
-    wire [7:0] w_aud4, w_aud5, w_aud6, w_aud7, w_aud8, w_aud9;
+    wire [7:0] w_aud0, w_aud1, w_aud2, w_aud3, w_aud4, w_aud5, w_aud6, w_aud7, w_aud8, w_aud9;
 
     audio_rx rx_inst (
         .clk(clk), .rst(sys_rst), .data_in(data_in), .data_en(data_en),
         .ch0(w_aud0), .ch1(w_aud1), .ch2(w_aud2), .ch3(w_aud3),
-        // ERWEITERUNG: Anbindung der neuen Kanäle (setzt voraus, dass audio_rx ebenfalls um diese Ports erweitert wurde)
         .ch4(w_aud4), .ch5(w_aud5), .ch6(w_aud6), .ch7(w_aud7), 
         .ch8(w_aud8), .ch9(w_aud9)
     );
@@ -61,16 +57,10 @@ module am_modulator_top #(
     // ----------------------------------------------------
     // 3. ZENTRALE SPEICHER-RESSOURCEN (Shared ROMs)
     // ----------------------------------------------------
-    // Wir nutzen 2 Dual-Port ROMs für 4 NCOs. 
-    // Jedes ROM hat 2048 Einträge (spart Platz für EP2C5).
-    // ERWEITERUNG: Wir nutzen nun 5 Dual-Port ROMs für 10 NCOs.
-    
-    wire [11:0] addr0, addr1, addr2, addr3;
-    wire signed [15:0] sine_val0, sine_val1, sine_val2, sine_val3;
-
-    // ERWEITERUNG: Adress- und Datenbusse für die Kanäle 4 bis 9
-    wire [11:0] addr4, addr5, addr6, addr7, addr8, addr9;
-    wire signed [15:0] sine_val4, sine_val5, sine_val6, sine_val7, sine_val8, sine_val9;
+    // Wir nutzen 5 Dual-Port ROMs für 10 NCOs. 
+    // Jedes ROM hat 2048 Einträge.
+    wire [11:0] addr0, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9;
+    wire signed [15:0] sine_val0, sine_val1, sine_val2, sine_val3, sine_val4, sine_val5, sine_val6, sine_val7, sine_val8, sine_val9;
 
     // Erstes Shared ROM für Kanal 0 und 1
     shared_sine_rom rom_inst_A (
@@ -86,21 +76,21 @@ module am_modulator_top #(
         .addr_b(addr3), .q_b(sine_val3)
     );
 
-    // ERWEITERUNG: Drittes Shared ROM für Kanal 4 und 5
+    // Drittes Shared ROM für Kanal 4 und 5
     shared_sine_rom rom_inst_C (
         .clk(clk),
         .addr_a(addr4), .q_a(sine_val4),
         .addr_b(addr5), .q_b(sine_val5)
     );
 
-    // ERWEITERUNG: Viertes Shared ROM für Kanal 6 und 7
+    // Viertes Shared ROM für Kanal 6 und 7
     shared_sine_rom rom_inst_D (
         .clk(clk),
         .addr_a(addr6), .q_a(sine_val6),
         .addr_b(addr7), .q_b(sine_val7)
     );
 
-    // ERWEITERUNG: Fünftes Shared ROM für Kanal 8 und 9
+    // Fünftes Shared ROM für Kanal 8 und 9
     shared_sine_rom rom_inst_E (
         .clk(clk),
         .addr_a(addr8), .q_a(sine_val8),
@@ -113,9 +103,7 @@ module am_modulator_top #(
     // ----------------------------------------------------
     // Die phase_inc Werte sind auf 10 MHz Referenztakt berechnet!
     // Formel: phase_inc = (f_ziel * 2^32) / 10.000.000
-    wire signed [15:0] s0, s1, s2, s3;
-    // ERWEITERUNG: HF-Signalausgänge für die Kanäle 4 bis 9
-    wire signed [15:0] s4, s5, s6, s7, s8, s9;
+    wire signed [15:0] s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
 
     // Kanal 0: 603 kHz
     nco nco0 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s0), 
@@ -137,7 +125,6 @@ module am_modulator_top #(
               .audio_in(w_aud3), .phase_inc(32'h24DD_2F1B), .ext_gain(16'd256),
               .phase_out(addr3), .sine_val_in(sine_val3));
 
-    // ERWEITERUNG: Neue Kanäle im 9-kHz Mittelwellen-Raster
     // Kanal 4: 531 kHz
     nco nco4 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s4), 
               .audio_in(w_aud4), .phase_inc(32'h0D98_B22B), .ext_gain(16'd256),
@@ -173,9 +160,8 @@ module am_modulator_top #(
     // 5. PIPELINED ADDER TREE (Summierung)
     // ----------------------------------------------------
     // Die Summierung erfolgt synchron zum sample_en.
-    reg signed [16:0] sum_stage1_a, sum_stage1_b;  // 17 Bit, da Summe von 16 Bit
-    // ERWEITERUNG: Register für weitere Paare der Ebene 1
-    reg signed [16:0] sum_stage1_c, sum_stage1_d, sum_stage1_e;
+    reg signed [16:0] sum_stage1_a, sum_stage1_b, sum_stage1_c, sum_stage1_d, sum_stage1_e;  // 17 Bit, da Summe von 16 Bit
+
 
     /* verilator lint_off UNUSEDSIGNAL */
     // ERWEITERUNG: Bitbreite wurde von 18 Bit auf 20 Bit erhöht, um Overflow bei 10 NCOs zu verhindern!
@@ -184,9 +170,7 @@ module am_modulator_top #(
 
     always @(posedge clk) begin
         if (sys_rst) begin
-            sum_stage1_a <= 0; sum_stage1_b <= 0;
-            // ERWEITERUNG: Reset für neue Pipelinestufen
-            sum_stage1_c <= 0; sum_stage1_d <= 0; sum_stage1_e <= 0;
+            sum_stage1_a <= 0; sum_stage1_b <= 0; sum_stage1_c <= 0; sum_stage1_d <= 0; sum_stage1_e <= 0;
             sum_stage2   <= 0; dac_out      <= 0;
         end else if (sample_en) begin 
             // bei jedem 5. Takt , also 10 MHz bei 50 MHz Master-CLK
@@ -194,7 +178,6 @@ module am_modulator_top #(
             // Ebene 1: Addiere Paare (17 Bit)
             sum_stage1_a <= $signed(s0) + $signed(s1);
             sum_stage1_b <= $signed(s2) + $signed(s3);
-            // ERWEITERUNG: Die neuen NCO-Paare in Ebene 1 addieren
             sum_stage1_c <= $signed(s4) + $signed(s5);
             sum_stage1_d <= $signed(s6) + $signed(s7);
             sum_stage1_e <= $signed(s8) + $signed(s9);

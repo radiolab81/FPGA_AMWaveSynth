@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
 
     // Audio Empfänger bereitstellen:
-    uint8_t packet_buffer[10]; // Platz für 4 Audio-Kanäle
+    uint8_t packet_buffer[10]; // Platz für 10 Audio-Kanäle
     uint64_t sim_time = 0;
 
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -82,11 +82,11 @@ int main(int argc, char** argv) {
         // MSG_DONTWAIT sorgt dafür, dass wir nicht blockieren, wenn kein Paket da ist
         int n = recvfrom(sockfd, packet_buffer, 10, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
         
-        if (n == 10) { // Wir haben ein Sample-Set für alle(!) 4 Kanäle!
+        if (n == 10) { // Wir haben ein Sample-Set für alle(!) 10 Kanäle!
             static int p_count = 0;
             if (p_count++ % 1000 == 0) printf("Audio-Paket erhalten! (Gesamt: %d)\n", p_count);
 
-            // Sende das Protokoll-Paket: Header "AUD" + 4 Byte Daten
+            // Sende das Protokoll-Paket: Header "AUD" + 10 Byte Daten
             send_to_fpga(top, 'A', sim_time, tfp);
             send_to_fpga(top, 'U', sim_time, tfp);
             send_to_fpga(top, 'D', sim_time, tfp);
