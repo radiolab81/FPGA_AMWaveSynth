@@ -113,6 +113,9 @@ module mcu_rx (
                                 4'd7: f_ch7 <= {temp_freq[23:0], data_in};
                                 4'd8: f_ch8 <= {temp_freq[23:0], data_in};
                                 4'd9: begin f_ch9 <= {temp_freq[23:0], data_in}; state <= S_IDLE; end
+                                default: begin
+                                   // Tue nichts oder setze einen sicheren Zustand
+                                end
                             endcase
                         end
                         byte_cnt <= byte_cnt + 6'd1;

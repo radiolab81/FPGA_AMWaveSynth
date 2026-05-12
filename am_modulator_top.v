@@ -110,52 +110,52 @@ module am_modulator_top #(
 
     // Kanal 0
     nco nco0 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s0), 
-              .audio_in(w_aud0), .phase_inc(w_frq0), .ext_gain(16'd256),
+              .audio_in(w_aud0), .phase_inc(w_frq0), .ext_gain(16'd65535),
               .phase_out(addr0), .sine_val_in(sine_val0));
 
     // Kanal 1
     nco nco1 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s1), 
-              .audio_in(w_aud1), .phase_inc(w_frq1), .ext_gain(16'd256),
+              .audio_in(w_aud1), .phase_inc(w_frq1), .ext_gain(16'd65535),
               .phase_out(addr1), .sine_val_in(sine_val1));
 
     // Kanal 2
     nco nco2 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s2), 
-              .audio_in(w_aud2), .phase_inc(w_frq2), .ext_gain(16'd256),
+              .audio_in(w_aud2), .phase_inc(w_frq2), .ext_gain(16'd65535),
               .phase_out(addr2), .sine_val_in(sine_val2));
 
     // Kanal 3
     nco nco3 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s3), 
-              .audio_in(w_aud3), .phase_inc(w_frq3), .ext_gain(16'd256),
+              .audio_in(w_aud3), .phase_inc(w_frq3), .ext_gain(16'd65535),
               .phase_out(addr3), .sine_val_in(sine_val3));
 
     // Kanal 4
     nco nco4 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s4), 
-              .audio_in(w_aud4), .phase_inc(w_frq4), .ext_gain(16'd256),
+              .audio_in(w_aud4), .phase_inc(w_frq4), .ext_gain(16'd65535),
               .phase_out(addr4), .sine_val_in(sine_val4));
 
     // Kanal 5
     nco nco5 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s5), 
-              .audio_in(w_aud5), .phase_inc(w_frq5), .ext_gain(16'd256),
+              .audio_in(w_aud5), .phase_inc(w_frq5), .ext_gain(16'd65535),
               .phase_out(addr5), .sine_val_in(sine_val5));
 
     // Kanal 6
     nco nco6 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s6), 
-              .audio_in(w_aud6), .phase_inc(w_frq6), .ext_gain(16'd256),
+              .audio_in(w_aud6), .phase_inc(w_frq6), .ext_gain(16'd65535),
               .phase_out(addr6), .sine_val_in(sine_val6));
 
     // Kanal 7
     nco nco7 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s7), 
-              .audio_in(w_aud7), .phase_inc(w_frq7), .ext_gain(16'd256),
+              .audio_in(w_aud7), .phase_inc(w_frq7), .ext_gain(16'd65535),
               .phase_out(addr7), .sine_val_in(sine_val7));
 
     // Kanal 8
     nco nco8 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s8), 
-              .audio_in(w_aud8), .phase_inc(w_frq8), .ext_gain(16'd256),
+              .audio_in(w_aud8), .phase_inc(w_frq8), .ext_gain(16'd65535),
               .phase_out(addr8), .sine_val_in(sine_val8));
 
     // Kanal 9
     nco nco9 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s9), 
-              .audio_in(w_aud9), .phase_inc(w_frq9), .ext_gain(16'd256),
+              .audio_in(w_aud9), .phase_inc(w_frq9), .ext_gain(16'd65535),
               .phase_out(addr9), .sine_val_in(sine_val9));
 
 
