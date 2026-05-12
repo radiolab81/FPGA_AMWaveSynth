@@ -10,25 +10,57 @@
 #include <netinet/in.h>
 //#include <fcntl.h> // Für non-blocking Sockets
 
-
-// Hilfsfunktion zum Senden eines Bytes an den Modulator
+// Hilfsfunktion zum Senden eines Bytes
 void send_to_fpga(Vam_modulator_top* top, uint8_t val, uint64_t &time_counter, VerilatedVcdC* tfp) {
+    // 1. Daten anlegen, aber clk ist noch 0. 
+    // Wir stellen sicher, dass data_en 0 ist, damit de_prev im FPGA sicher 0 wird.
     top->data_in = val;
+    top->data_en = 0; 
+    top->clk = 0;
+    top->eval();
+    if (tfp) tfp->dump(time_counter++);
+
+    // 2. Steigende Flanke 1: Das FPGA-Register 'de_prev' übernimmt die 0 von oben.
+    // data_en ist immer noch 0.
+    top->clk = 1;
+    top->eval();
+    if (tfp) tfp->dump(time_counter++);
+
+    // 3. Fallende Flanke: clk geht auf 0. Jetzt setzen wir data_en auf 1.
+    // Das bereitet die Flankenerkennung für den NÄCHSTEN Takt vor.
+    top->clk = 0;
     top->data_en = 1;
-    
-    // 2 Takte für den FPGA Zeit geben (50MHz Domäne)
-    // Das entspricht einer steigenden Flanke, damit die audio_rx Logik das Byte sieht
-    for(int i=0; i<2; i++) {
-        top->clk = !top->clk;
-        top->eval();
-        if (tfp) tfp->dump(time_counter++);
-    }
-    top->data_en = 0; // Enable wieder runter
-    top->clk = !top->clk; 
-    top->eval(); 
+    top->eval();
+    if (tfp) tfp->dump(time_counter++);
+
+    // 4. Steigende Flanke 2: JETZT passiert die Magie!
+    // data_en ist 1, de_prev ist noch 0 -> de_pulse ist für diesen EINEN Takt 1.
+    top->clk = 1;
+    top->eval();
+    if (tfp) tfp->dump(time_counter++);
+
+    // 5. Abfallende Flanke & Aufräumen: data_en wieder weg.
+    top->clk = 0;
+    top->data_en = 0;
+    top->eval();
     if (tfp) tfp->dump(time_counter++);
 }
 
+// NEU: Hilfsfunktion um alle 10 Frequenzen zu setzen
+void send_frequency_update(Vam_modulator_top* top, const uint32_t freqs[10], uint64_t &time_counter, VerilatedVcdC* tfp) {
+    std::cout << "Sende Frequenz-Update an alle Kanäle..." << std::endl;
+    send_to_fpga(top, 'F', time_counter, tfp);
+    send_to_fpga(top, 'R', time_counter, tfp);
+    send_to_fpga(top, 'Q', time_counter, tfp);
+
+    for(int i = 0; i < 10; i++) {
+        // Zerlege 32-Bit in 4 Bytes (Big-Endian: MSB zuerst)
+        send_to_fpga(top, (freqs[i] >> 24) & 0xFF, time_counter, tfp);
+        send_to_fpga(top, (freqs[i] >> 16) & 0xFF, time_counter, tfp);
+        send_to_fpga(top, (freqs[i] >> 8)  & 0xFF, time_counter, tfp);
+        send_to_fpga(top, (freqs[i] >> 0)  & 0xFF, time_counter, tfp);
+    }
+}
 
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
@@ -37,6 +69,7 @@ int main(int argc, char** argv) {
     uint8_t packet_buffer[10]; // Platz für 10 Audio-Kanäle
     uint64_t sim_time = 0;
 
+    // UDP Setup
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
@@ -59,47 +92,52 @@ int main(int argc, char** argv) {
 
     std::ofstream dac_file("dac_output.csv"); // DAC Ausgangssignal für FFT in GNU Octave
 
+    // Initialisierung
     top->clk = 0;
     //top->rst = 1;
     top->rst = 0; // unser Dev-Board nutzt einen inv. Reset.
 
+    // Beispiel-Frequenzen (könnten auch live berechnet werden)
+    // Die Formel für den NCO (DDS) bei einem Referenztakt (fclk​) von 10 MHz und einem 32-Bit Phasenakkumulator lautet: fout​=232phase_inc⋅fclk​​
 
-    std::cout << "Starte Simulation mit VCD-Export..." << std::endl;
 
-    // Hauptschleife der Simulation
+    // Neue Frequenzen: LW (153, 171, 225) und diverse MW Sender
+    uint32_t my_freqs[10] = {
+        0x03E978D5, // CH0: 153 kHz
+        0x046452D1, // CH1: 171 kHz
+        0x05C8500D, // CH2: 225 kHz
+        0x2467C924, // CH3: 1422 kHz
+        0x24DD2F1B, // CH4: 1440 kHz
+        0x0FE5890C, // CH5: 621 kHz
+        0x19934566, // CH6: 999 kHz
+        0x1999999A, // CH7: 1000 kHz
+        0x1FC7A163, // CH8: 1242 kHz
+        0x2889A027  // CH9: 1584 kHz
+    };
+
+    bool freqs_initialized = false;
+
     for (int i = 0; i < 1000000; i++) {
-        // Reset nach 40 Ticks lösen
-        //if (i == 40) top->rst = 0;
-         if (i == 40) top->rst = 1; // unser Dev-Board nutzt einen inv. Reset.
+        if (i == 40) top->rst = 1; // Reset lösen
 
-        // 1. Schauen, ob Audio-Daten da sind   
-        // ffmpeg -re -i deine_musik.mp3 \
-    // -af "pan=4c|c0=c0|c1=c1|c2=c0|c3=c1,aresample=44100" \
-    // -f u8 -acodec pcm_u8 udp://127.0.0.1:4444
+        // Sobald Reset gelöst ist, schicken wir einmal die Frequenzen raus
+        if (i > 100 && !freqs_initialized) {
+            send_frequency_update(top, my_freqs, sim_time, tfp);
+            freqs_initialized = true;
+        }
+
+        // Audio-Empfang
         struct sockaddr_in cliaddr;
         socklen_t len = sizeof(cliaddr);
         
         // MSG_DONTWAIT sorgt dafür, dass wir nicht blockieren, wenn kein Paket da ist
         int n = recvfrom(sockfd, packet_buffer, 10, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
         
-        if (n == 10) { // Wir haben ein Sample-Set für alle(!) 10 Kanäle!
-            static int p_count = 0;
-            if (p_count++ % 1000 == 0) printf("Audio-Paket erhalten! (Gesamt: %d)\n", p_count);
-
-            // Sende das Protokoll-Paket: Header "AUD" + 10 Byte Daten
+        if (n == 10) {
             send_to_fpga(top, 'A', sim_time, tfp);
             send_to_fpga(top, 'U', sim_time, tfp);
             send_to_fpga(top, 'D', sim_time, tfp);
-            send_to_fpga(top, packet_buffer[0], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[1], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[2], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[3], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[4], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[5], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[6], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[7], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[8], sim_time, tfp);
-            send_to_fpga(top, packet_buffer[9], sim_time, tfp);
+            for(int k=0; k<10; k++) send_to_fpga(top, packet_buffer[k], sim_time, tfp);
         }
 
         // --- Normaler Systemtakt (50 MHz Domäne) ---

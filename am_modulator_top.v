@@ -6,7 +6,7 @@
  * TAKTKONZEPT:
  * - clk: 50 MHz (Physischer FPGA-Takt)
  * - sample_en: 10 MHz (Logischer Takt / Enable-Puls alle 5 Zyklen)
- * - DAC-Rate: 10 MSPS (Jedes Sample steht für 100ns stabil am R2R-Ausgang)
+ * - DAC-Rate: 10 MSPS (Jedes Sample steht für 100ns stabil am DAC/R2R-Ausgang)
  */
 
 module am_modulator_top #(
@@ -39,19 +39,22 @@ module am_modulator_top #(
         else clk_div <= (sample_en) ? 3'd0 : clk_div + 3'd1; // sample_en HIGH, dann clk_div auf 0, sonst clk_div inkrementieren [ 1x Arbeitstakt, 4 Leertakte  = 5 Takte ]
     end
 
-    // ----------------------------------------------------
+// ----------------------------------------------------
     // 2. AUDIO-EMPFÄNGER (PROTOKOLL-DECODER)
     // ----------------------------------------------------
-    // Dieses Modul empfängt das [A][U][D][CH1][CH2][CH3][CH4] Protokoll
-    // ERWEITERUNG: Nimmt jetzt auch CH5 bis CH10 entgegen
-
+    // Dieses Modul empfängt das [A][U][D][CH0][CH2][CH3][CH4] ... [CH9] Protokoll
     wire [7:0] w_aud0, w_aud1, w_aud2, w_aud3, w_aud4, w_aud5, w_aud6, w_aud7, w_aud8, w_aud9;
+    
+    // Wires für die dynamischen Frequenzen  [F][R][Q][CH0][CH2][CH3][CH4] ... [CH9] Protokoll
+    wire [31:0] w_frq0, w_frq1, w_frq2, w_frq3, w_frq4, w_frq5, w_frq6, w_frq7, w_frq8, w_frq9;
 
-    audio_rx rx_inst (
+    mcu_rx rx_inst (
         .clk(clk), .rst(sys_rst), .data_in(data_in), .data_en(data_en),
-        .ch0(w_aud0), .ch1(w_aud1), .ch2(w_aud2), .ch3(w_aud3),
-        .ch4(w_aud4), .ch5(w_aud5), .ch6(w_aud6), .ch7(w_aud7), 
-        .ch8(w_aud8), .ch9(w_aud9)
+        .ch0(w_aud0), .ch1(w_aud1), .ch2(w_aud2), .ch3(w_aud3), .ch4(w_aud4), 
+        .ch5(w_aud5), .ch6(w_aud6), .ch7(w_aud7), .ch8(w_aud8), .ch9(w_aud9),
+        // Frequenz-Outputs verbinden
+        .f_ch0(w_frq0), .f_ch1(w_frq1), .f_ch2(w_frq2), .f_ch3(w_frq3), .f_ch4(w_frq4),
+        .f_ch5(w_frq5), .f_ch6(w_frq6), .f_ch7(w_frq7), .f_ch8(w_frq8), .f_ch9(w_frq9)
     );
 
     // ----------------------------------------------------
@@ -105,54 +108,54 @@ module am_modulator_top #(
     // Formel: phase_inc = (f_ziel * 2^32) / 10.000.000
     wire signed [15:0] s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
 
-    // Kanal 0: 603 kHz
+    // Kanal 0
     nco nco0 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s0), 
-              .audio_in(w_aud0), .phase_inc(32'h0F70_0020), .ext_gain(16'd256),
+              .audio_in(w_aud0), .phase_inc(w_frq0), .ext_gain(16'd256),
               .phase_out(addr0), .sine_val_in(sine_val0));
 
-    // Kanal 1: 756 kHz
+    // Kanal 1
     nco nco1 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s1), 
-              .audio_in(w_aud1), .phase_inc(32'h1359_196B), .ext_gain(16'd256),
+              .audio_in(w_aud1), .phase_inc(w_frq1), .ext_gain(16'd256),
               .phase_out(addr1), .sine_val_in(sine_val1));
 
-    // Kanal 2: 999 kHz
+    // Kanal 2
     nco nco2 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s2), 
-              .audio_in(w_aud2), .phase_inc(32'h1993_4566), .ext_gain(16'd256),
+              .audio_in(w_aud2), .phase_inc(w_frq2), .ext_gain(16'd256),
               .phase_out(addr2), .sine_val_in(sine_val2));
 
-    // Kanal 3: 1440 kHz
+    // Kanal 3
     nco nco3 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s3), 
-              .audio_in(w_aud3), .phase_inc(32'h24DD_2F1B), .ext_gain(16'd256),
+              .audio_in(w_aud3), .phase_inc(w_frq3), .ext_gain(16'd256),
               .phase_out(addr3), .sine_val_in(sine_val3));
 
-    // Kanal 4: 531 kHz
+    // Kanal 4
     nco nco4 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s4), 
-              .audio_in(w_aud4), .phase_inc(32'h0D98_B22B), .ext_gain(16'd256),
+              .audio_in(w_aud4), .phase_inc(w_frq4), .ext_gain(16'd256),
               .phase_out(addr4), .sine_val_in(sine_val4));
 
-    // Kanal 5: 810 kHz
+    // Kanal 5
     nco nco5 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s5), 
-              .audio_in(w_aud5), .phase_inc(32'h14BC_A17F), .ext_gain(16'd256),
+              .audio_in(w_aud5), .phase_inc(w_frq5), .ext_gain(16'd256),
               .phase_out(addr5), .sine_val_in(sine_val5));
 
-    // Kanal 6: 900 kHz
+    // Kanal 6
     nco nco6 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s6), 
-              .audio_in(w_aud6), .phase_inc(32'h170A_7C70), .ext_gain(16'd256),
+              .audio_in(w_aud6), .phase_inc(w_frq6), .ext_gain(16'd256),
               .phase_out(addr6), .sine_val_in(sine_val6));
 
-    // Kanal 7: 1080 kHz
+    // Kanal 7
     nco nco7 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s7), 
-              .audio_in(w_aud7), .phase_inc(32'h1BA5_E353), .ext_gain(16'd256),
+              .audio_in(w_aud7), .phase_inc(w_frq7), .ext_gain(16'd256),
               .phase_out(addr7), .sine_val_in(sine_val7));
 
-    // Kanal 8: 1215 kHz
+    // Kanal 8
     nco nco8 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s8), 
-              .audio_in(w_aud8), .phase_inc(32'h1F1A_82BE), .ext_gain(16'd256),
+              .audio_in(w_aud8), .phase_inc(w_frq8), .ext_gain(16'd256),
               .phase_out(addr8), .sine_val_in(sine_val8));
 
-    // Kanal 9: 1530 kHz
+    // Kanal 9
     nco nco9 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s9), 
-              .audio_in(w_aud9), .phase_inc(32'h272B_4B0C), .ext_gain(16'd256),
+              .audio_in(w_aud9), .phase_inc(w_frq9), .ext_gain(16'd256),
               .phase_out(addr9), .sine_val_in(sine_val9));
 
 
