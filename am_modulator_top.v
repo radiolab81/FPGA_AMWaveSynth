@@ -5,6 +5,7 @@
  * Nutzt Shared-Dual-Port-ROMs für die NCOs.
  * TAKTKONZEPT:
  * - clk: 50 MHz (Physischer FPGA-Takt)
+ * - sample_en: 10 MHz (Logischer Takt / Enable-Puls alle 5 Zyklen)
  * - DAC-Rate: 10 MSPS (Jedes Sample steht für 100ns stabil am DAC/R2R-Ausgang)
  */
 
