@@ -46,7 +46,7 @@ void send_to_fpga(Vam_modulator_top* top, uint8_t val, uint64_t &time_counter, V
     if (tfp) tfp->dump(time_counter++);
 }
 
-// NEU: Hilfsfunktion um alle 10 Frequenzen zu setzen
+// Hilfsfunktion um alle 10 Frequenzen zu setzen
 void send_frequency_update(Vam_modulator_top* top, const uint32_t freqs[10], uint64_t &time_counter, VerilatedVcdC* tfp) {
     std::cout << "Sende Frequenz-Update an alle Kanäle..." << std::endl;
     send_to_fpga(top, 'F', time_counter, tfp);
@@ -60,6 +60,21 @@ void send_frequency_update(Vam_modulator_top* top, const uint32_t freqs[10], uin
         send_to_fpga(top, (freqs[i] >> 8)  & 0xFF, time_counter, tfp);
         send_to_fpga(top, (freqs[i] >> 0)  & 0xFF, time_counter, tfp);
     }
+}
+
+// Hilfsfunktion um das Gain für einen bestimmten Kanal anzupassen
+void send_gain_update(Vam_modulator_top* top, uint8_t channel, uint16_t gain, uint64_t &time_counter, VerilatedVcdC* tfp) {
+    if(channel > 9) return; // Sicherstellen, dass nur gültige Kanäle adressiert werden
+    
+    send_to_fpga(top, 'G', time_counter, tfp);
+    send_to_fpga(top, 'A', time_counter, tfp);
+    send_to_fpga(top, 'N', time_counter, tfp);
+    
+    send_to_fpga(top, channel, time_counter, tfp); // Kanalnummer (0-9)
+    
+    // 16-Bit Gain in 2 Bytes zerlegen (MSB first)
+    send_to_fpga(top, (gain >> 8) & 0xFF, time_counter, tfp);
+    send_to_fpga(top, (gain >> 0) & 0xFF, time_counter, tfp);
 }
 
 int main(int argc, char** argv) {
@@ -116,6 +131,8 @@ int main(int argc, char** argv) {
     };
 
     bool freqs_initialized = false;
+    bool gains_initialized = false;
+
 
     for (int i = 0; i < 1000000; i++) {
         if (i == 40) top->rst = 1; // Reset lösen
@@ -139,6 +156,14 @@ int main(int argc, char** argv) {
             send_to_fpga(top, 'D', sim_time, tfp);
             for(int k=0; k<10; k++) send_to_fpga(top, packet_buffer[k], sim_time, tfp);
         }
+
+        // Testweise GAIN-Update
+        if (i > 100 && !gains_initialized) {
+            send_gain_update(top, 0, 256, sim_time, tfp); // -48 dB
+            send_gain_update(top, 1, 4096, sim_time, tfp); // - 24 dB
+            send_gain_update(top, 2, 16384, sim_time, tfp); // -12 dB
+            gains_initialized = true;
+        } 
 
         // --- Normaler Systemtakt (50 MHz Domäne) ---
         // 1. Takt toggeln

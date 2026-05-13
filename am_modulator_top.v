@@ -48,13 +48,20 @@ module am_modulator_top #(
     // Wires für die dynamischen Frequenzen  [F][R][Q][CH0][CH2][CH3][CH4] ... [CH9] Protokoll
     wire [31:0] w_frq0, w_frq1, w_frq2, w_frq3, w_frq4, w_frq5, w_frq6, w_frq7, w_frq8, w_frq9;
 
+    // Wires für die dynamischen Gains [G][A][N][CH][Gain] Protokoll
+    wire [15:0] w_gan0, w_gan1, w_gan2, w_gan3, w_gan4, w_gan5, w_gan6, w_gan7, w_gan8, w_gan9;
+
     mcu_rx rx_inst (
         .clk(clk), .rst(sys_rst), .data_in(data_in), .data_en(data_en),
         .ch0(w_aud0), .ch1(w_aud1), .ch2(w_aud2), .ch3(w_aud3), .ch4(w_aud4), 
         .ch5(w_aud5), .ch6(w_aud6), .ch7(w_aud7), .ch8(w_aud8), .ch9(w_aud9),
         // Frequenz-Outputs verbinden
         .f_ch0(w_frq0), .f_ch1(w_frq1), .f_ch2(w_frq2), .f_ch3(w_frq3), .f_ch4(w_frq4),
-        .f_ch5(w_frq5), .f_ch6(w_frq6), .f_ch7(w_frq7), .f_ch8(w_frq8), .f_ch9(w_frq9)
+        .f_ch5(w_frq5), .f_ch6(w_frq6), .f_ch7(w_frq7), .f_ch8(w_frq8), .f_ch9(w_frq9),
+
+        // Gain-Outputs verbinden
+        .g_ch0(w_gan0), .g_ch1(w_gan1), .g_ch2(w_gan2), .g_ch3(w_gan3), .g_ch4(w_gan4),
+        .g_ch5(w_gan5), .g_ch6(w_gan6), .g_ch7(w_gan7), .g_ch8(w_gan8), .g_ch9(w_gan9)
     );
 
     // ----------------------------------------------------
@@ -110,52 +117,52 @@ module am_modulator_top #(
 
     // Kanal 0
     nco nco0 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s0), 
-              .audio_in(w_aud0), .phase_inc(w_frq0), .ext_gain(16'd65535),
+              .audio_in(w_aud0), .phase_inc(w_frq0), .ext_gain(w_gan0),
               .phase_out(addr0), .sine_val_in(sine_val0));
 
     // Kanal 1
     nco nco1 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s1), 
-              .audio_in(w_aud1), .phase_inc(w_frq1), .ext_gain(16'd65535),
+              .audio_in(w_aud1), .phase_inc(w_frq1), .ext_gain(w_gan1),
               .phase_out(addr1), .sine_val_in(sine_val1));
 
     // Kanal 2
     nco nco2 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s2), 
-              .audio_in(w_aud2), .phase_inc(w_frq2), .ext_gain(16'd65535),
+              .audio_in(w_aud2), .phase_inc(w_frq2), .ext_gain(w_gan2),
               .phase_out(addr2), .sine_val_in(sine_val2));
 
     // Kanal 3
     nco nco3 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s3), 
-              .audio_in(w_aud3), .phase_inc(w_frq3), .ext_gain(16'd65535),
+              .audio_in(w_aud3), .phase_inc(w_frq3), .ext_gain(w_gan3),
               .phase_out(addr3), .sine_val_in(sine_val3));
 
     // Kanal 4
     nco nco4 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s4), 
-              .audio_in(w_aud4), .phase_inc(w_frq4), .ext_gain(16'd65535),
+              .audio_in(w_aud4), .phase_inc(w_frq4), .ext_gain(w_gan4),
               .phase_out(addr4), .sine_val_in(sine_val4));
 
     // Kanal 5
     nco nco5 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s5), 
-              .audio_in(w_aud5), .phase_inc(w_frq5), .ext_gain(16'd65535),
+              .audio_in(w_aud5), .phase_inc(w_frq5), .ext_gain(w_gan5),
               .phase_out(addr5), .sine_val_in(sine_val5));
 
     // Kanal 6
     nco nco6 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s6), 
-              .audio_in(w_aud6), .phase_inc(w_frq6), .ext_gain(16'd65535),
+              .audio_in(w_aud6), .phase_inc(w_frq6), .ext_gain(w_gan6),
               .phase_out(addr6), .sine_val_in(sine_val6));
 
     // Kanal 7
     nco nco7 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s7), 
-              .audio_in(w_aud7), .phase_inc(w_frq7), .ext_gain(16'd65535),
+              .audio_in(w_aud7), .phase_inc(w_frq7), .ext_gain(w_gan7),
               .phase_out(addr7), .sine_val_in(sine_val7));
 
     // Kanal 8
     nco nco8 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s8), 
-              .audio_in(w_aud8), .phase_inc(w_frq8), .ext_gain(16'd65535),
+              .audio_in(w_aud8), .phase_inc(w_frq8), .ext_gain(w_gan8),
               .phase_out(addr8), .sine_val_in(sine_val8));
 
     // Kanal 9
     nco nco9 (.clk(clk), .rst(sys_rst), .en(sample_en), .rf_out(s9), 
-              .audio_in(w_aud9), .phase_inc(w_frq9), .ext_gain(16'd65535),
+              .audio_in(w_aud9), .phase_inc(w_frq9), .ext_gain(w_gan9),
               .phase_out(addr9), .sine_val_in(sine_val9));
 
 
