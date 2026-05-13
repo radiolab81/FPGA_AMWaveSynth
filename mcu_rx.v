@@ -67,7 +67,7 @@ module mcu_rx (
             f_ch4 <= 32'h0D98_B22B; f_ch5 <= 32'h14BC_A17F;
             f_ch6 <= 32'h170A_7C70; f_ch7 <= 32'h1BA5_E353;
             f_ch8 <= 32'h1F1A_82BE; f_ch9 <= 32'h272B_4B0C;
-
+				
             // Initialisierung Gain (Voller Pegel = 65535)
             g_ch0 <= 16'd65535; g_ch1 <= 16'd65535; g_ch2 <= 16'd65535; 
             g_ch3 <= 16'd65535; g_ch4 <= 16'd65535; g_ch5 <= 16'd65535; 

@@ -5,12 +5,11 @@
  * Nutzt Shared-Dual-Port-ROMs für die NCOs.
  * TAKTKONZEPT:
  * - clk: 50 MHz (Physischer FPGA-Takt)
- * - sample_en: 10 MHz (Logischer Takt / Enable-Puls alle 5 Zyklen)
  * - DAC-Rate: 10 MSPS (Jedes Sample steht für 100ns stabil am DAC/R2R-Ausgang)
  */
 
 module am_modulator_top #(
-    parameter OUT_BITS = 12  // Breite des DAC oder R2R-Netzwerks
+    parameter OUT_BITS = 12 // Breite des DAC oder R2R-Netzwerks
 )(
     input wire clk,          // Globaler 50 MHz Takt vom Quarz
     input wire rst,          // Reset-Eingang
@@ -23,8 +22,21 @@ module am_modulator_top #(
     // DAC/R2R-DAC Ausgangspins
     output reg signed [OUT_BITS-1:0] dac_out
 );
+    // ----------------------------------------------------
+    // 0. RESET-ENTPRELLUNG (DEBOUNCER)
+    // ----------------------------------------------------
+    wire sys_rst; // Dieser Draht wird nun vom Debouncer getrieben
+
+    // Instanziierung des Entprell-Moduls
+    debouncer #(
+        .WAIT_CYCLES(1_000_000) // for verilator use simply 1 oder 10
+    ) rst_filter (
+        .clk(clk),
+        .signal_in(!rst),      // (!)für den Fall, dass RST auf dem Board invertiert ist 
+        .signal_out(sys_rst)   // Stabiles Ausgangssignal
+    );
     // für den Fall, dass RST auf dem Board invertiert ist 
-    wire sys_rst = !rst; // sys_rst ist jetzt 1, wenn der Taster GEDRÜCKT wird
+    //wire sys_rst = !rst; // sys_rst ist jetzt 1, wenn der Taster GEDRÜCKT wird
 
     // ----------------------------------------------------
     // 1. TAKT-GENERATOR (ENABLE-PULS)
