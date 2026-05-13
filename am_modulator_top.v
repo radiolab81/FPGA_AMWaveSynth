@@ -52,7 +52,7 @@ module am_modulator_top #(
         else clk_div <= (sample_en) ? 3'd0 : clk_div + 3'd1; // sample_en HIGH, dann clk_div auf 0, sonst clk_div inkrementieren [ 1x Arbeitstakt, 4 Leertakte  = 5 Takte ]
     end
 
-// ----------------------------------------------------
+    // ----------------------------------------------------
     // 2. AUDIO-EMPFÄNGER (PROTOKOLL-DECODER)
     // ----------------------------------------------------
     // Dieses Modul empfängt das [A][U][D][CH0][CH2][CH3][CH4] ... [CH9] Protokoll
