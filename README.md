@@ -92,6 +92,8 @@ Allows targeted att. adjustment for a single specific channel.
 
 **Value Range:** `0x0000` (Mute) -96dB att. to `0xFFFF` (Unity/Max Gain). 
 
+![att](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/10ch_with_att.jpg "first 3 stations with att.")
+
 ---
 
 ## Technical Specifications
