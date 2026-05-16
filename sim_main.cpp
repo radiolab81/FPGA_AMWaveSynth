@@ -12,38 +12,48 @@
 
 // Hilfsfunktion zum Senden eines Bytes
 void send_to_fpga(Vam_modulator_top* top, uint8_t val, uint64_t &time_counter, VerilatedVcdC* tfp) {
-    // 1. Daten anlegen, aber clk ist noch 0. 
-    // Wir stellen sicher, dass data_en 0 ist, damit de_prev im FPGA sicher 0 wird.
+    // 1. Daten stabil anlegen, clk ist 0
     top->data_in = val;
-    top->data_en = 0; 
+    top->data_en = 0;
     top->clk = 0;
     top->eval();
     if (tfp) tfp->dump(time_counter++);
 
-    // 2. Steigende Flanke 1: Das FPGA-Register 'de_prev' übernimmt die 0 von oben.
-    // data_en ist immer noch 0.
-    top->clk = 1;
-    top->eval();
-    if (tfp) tfp->dump(time_counter++);
+    // Real-World Anpassung: Warten, damit der Glitch-Filter sicher leerläuft (Low)
+    for(int i = 0; i < 5; i++) {
+        top->clk = 1; top->eval(); if (tfp) tfp->dump(time_counter++);
+        top->clk = 0; top->eval(); if (tfp) tfp->dump(time_counter++);
+    }
 
-    // 3. Fallende Flanke: clk geht auf 0. Jetzt setzen wir data_en auf 1.
-    // Das bereitet die Flankenerkennung für den NÄCHSTEN Takt vor.
-    top->clk = 0;
+    // 2. data_en aktivieren (Vorlauf)
     top->data_en = 1;
     top->eval();
     if (tfp) tfp->dump(time_counter++);
 
-    // 4. Steigende Flanke 2: JETZT passiert die Magie!
-    // data_en ist 1, de_prev ist noch 0 -> de_pulse ist für diesen EINEN Takt 1.
-    top->clk = 1;
-    top->eval();
-    if (tfp) tfp->dump(time_counter++);
+    // 3. Ausreichend Taktzyklen halten für das gehärtete EMV-Modul!
+    // 3 Takte Sync + 4 Takte Glitch-Filter + 1 Takt Auswertung = Min. 8 Takte.
+    // Wir nutzen 10 Takte für einen sicheren Strobe-Puls.
+    for(int i = 0; i < 10; i++) {
+        top->clk = 1; // Steigende Flanke
+        top->eval();
+        if (tfp) tfp->dump(time_counter++);
+        
+        top->clk = 0; // Fallende Flanke
+        top->eval();
+        if (tfp) tfp->dump(time_counter++);
+    }
 
-    // 5. Abfallende Flanke & Aufräumen: data_en wieder weg.
-    top->clk = 0;
+    // 4. Aufräumen: data_en wieder weg
     top->data_en = 0;
     top->eval();
     if (tfp) tfp->dump(time_counter++);
+    
+    // 5. Nachlauf für Stabilität: Der Glitch-Filter muss nun wieder auf Null
+    // sinken, bevor das nächste Byte gesendet wird. Wieder 10 Takte Puffer.
+    for(int i = 0; i < 10; i++) {
+        top->clk = 1; top->eval(); if (tfp) tfp->dump(time_counter++);
+        top->clk = 0; top->eval(); if (tfp) tfp->dump(time_counter++);
+    }
 }
 
 // Hilfsfunktion um alle 10 Frequenzen zu setzen
