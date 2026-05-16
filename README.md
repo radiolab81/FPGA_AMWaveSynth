@@ -32,86 +32,78 @@ Good prerequisites for realizing the AMWaveSynth as an FPGA chip, in addition to
 ## Update 10ch tech-demo: 
 ---
 
-# Communication Protocol: mcu_rx
-
-The `mcu_rx` module implements a byte-oriented serial protocol to control 10 audio synthesis channels. Data transmission is state-managed via an 8-bit bus with a validation signal (`data_en`).
-
-## General Packet Structure
-
-Each command begins with a 3-byte ASCII header (identifier), followed by a specific number of data bytes. All multi-byte values are transmitted in **Big-Endian** format (MSB first).
-
-| Command Type | Header | Data Length | Description |
-| --- | --- | --- | --- |
-| **Audio** | `AUD` | 10 Bytes | Updates 8-bit amplitude values for all channels. |
-| **Frequency** | `FRQ` | 40 Bytes | Sets 32-bit frequency control words for all channels. |
-| **Gain** | `GAN` | 3 Bytes | Sets the 16-bit volume for a specific channel. |
-
----
-
-## Command Details
-
-### 1. Audio Data (`AUD`)
-
-Updates the instantaneous amplitude values (modulation signal) for channels 0 through 9.
-
-* **Header:** `0x41 0x55 0x44` (ASCII "AUD")
-* **Payload:** 10 Bytes (1 byte per channel)
-* **Value Range:** `0x00` to `0xFF` (Offset-binary, midpoint = `0x80`)
-
-**Sequence:**
-`[A] [U] [D] [CH0] [CH1] [CH2] [CH3] [CH4] [CH5] [CH6] [CH7] [CH8] [CH9]`
-
----
-
-### 2. Frequency Control (`FRQ`)
-
-Sets the 32-bit phase increment values (Frequency Tuning Words) for all 10 channels.
-
-* **Header:** `0x46 0x52 0x51` (ASCII "FRQ")
-* **Payload:** 40 Bytes (4 bytes per channel, MSB first)
-
-**Transmission Order:**
-
-1. `f_ch0` (Bytes: MSB, Mid-H, Mid-L, LSB)
-2. `f_ch1` (Bytes: MSB, Mid-H, Mid-L, LSB)
-3. ... through `f_ch9`
-
----
-
-### 3. Channel Gain (`GAN`)
-
-Allows targeted att. adjustment for a single specific channel.
-
-* **Header:** `0x47 0x41 0x4E` (ASCII "GAN")
-* **Payload:** 3 Bytes
-* **Byte 0:** Channel Index (`0x00` to `0x09`)
-* **Byte 1:** Gain High-Byte (MSB)
-* **Byte 2:** Gain Low-Byte (LSB)
-
-
-
-**Value Range:** `0x0000` (Mute) -96dB att. to `0xFFFF` (Unity/Max Gain). 
 
 ![att](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/10ch_with_att.jpg "first 3 stations with att.")
 
----
+# Hardened MCU-to-FPGA Receiver (EMC-Proof Version)
 
-## Technical Specifications
+This Verilog module is a robust, hardware-hardened communication interface designed to bridge the gap between an asynchronous MCU (like ESP32, STM32, or AVR) and internal FPGA logic. 
 
-### Finite State Machine (FSM)
+Unlike standard RTL receivers, this "EMC-Version" is specifically engineered to handle **real-world physical connections** such as long jumper wires, unshielded breadboards, and environments with high electromagnetic interference (EMI).
 
-The module utilizes a state machine to decode incoming streams. Any invalid header character or out-of-range channel index results in an immediate transition back to `S_IDLE`.
+## 🚀 Key Features
 
-### Reset Behavior
+* **EMC-Hardened Input Stage:**
+    * **3-Stage Synchronizer:** Eliminates metastability issues on the asynchronous `data_en` strobe.
+    * **Digital Glitch Filter:** A 4-tap integrator logic ignores high-frequency spikes and crosstalk on the signal lines.
+    * **Schmitt-Trigger Logic:** Implements digital hysteresis to ensure clean state transitions.
+* **FSM Watchdog Timer:** An integrated hardware watchdog automatically resets the Finite State Machine to the `IDLE` state if a transmission is interrupted or corrupted by noise, preventing system deadlocks.
+* **Safe Data Latching:** 2-FF staging for the 8-bit data bus ensures consistent data capturing across the clock domain boundary.
+* **High Reliability Protocol:** Supports robust command headers for Audio, Frequency, and Gain control.
 
-Upon a hardware reset (`rst`), the module initializes with the following defaults:
+## 🛠 Hardware Architecture
 
-* **Audio:** All channels set to `0x80` (Neutral/Silent).
-* **Frequency:** Channels are initialized with pre-defined hardcoded default frequencies.
-* **Gain:** All channels set to maximum amplitude (`0xFFFF`).
+The module implements a multi-layer defense strategy for incoming signals:
 
-### Interface Requirements
+1.  **Synchronization Layer:** All asynchronous inputs are brought into the local `clk` domain.
+2.  **Filter Layer:** The `data_en` strobe must be stable for a programmable number of clock cycles (`FILTER_TAPS`) before being recognized as a valid edge.
+3.  **Watchdog Layer:** Tracks FSM activity and triggers a timeout if the MCU stops sending bytes mid-packet.
 
-* **Clocking:** Data is sampled on the rising edge of `clk`.
-* **Enable Signal:** The module performs edge detection on `data_en`. A single pulse per byte is required.
-* **Endianness:** Big-Endian (MSB First) is strictly enforced for all multi-byte parameters.
+## 📋 Module Parameters
+
+| Parameter | Default Value | Description |
+|:--- |:--- |:--- |
+| `TIMEOUT_CYCLES` | `32'd50_000_000` | FSM Reset timeout (e.g., 1.0s @ 50MHz). |
+| `FILTER_TAPS` | `4'd4` | Number of stable clock cycles required to validate a strobe. |
+
+## 📡 Protocol Specification
+
+The module listens for a 3-character ASCII header followed by a fixed-length payload:
+
+### 1. Audio Stream (`AUD`)
+Updates 10 channels of 8-bit PCM data.
+* **Header:** `0x41 0x55 0x44` ("AUD")
+* **Payload:** 10 Bytes (CH0 to CH9)
+
+### 2. Frequency Control (`FRQ`)
+Updates 32-bit Phase Increments (NCO) for 10 channels.
+* **Header:** `0x46 0x52 0x51` ("FRQ")
+* **Payload:** 40 Bytes (10x 4-Byte words, Big-Endian)
+
+### 3. Gain Control (`GAN`)
+Updates 16-bit volume/gain for a specific channel.
+* **Header:** `0x47 0x41 0x4E` ("GAN")
+* **Payload:** 1 Byte (Channel ID 0-9) + 2 Bytes (16-bit Gain, MSB first)
+
+## 💻 Timing Requirements (Real-World)
+
+Due to the internal glitch filtering, the MCU must hold the `data_en` signal high for several FPGA clock cycles. 
+
+**Minimum Pulse Width Calculation:**
+$$T_{pulse} > (FILTER\_TAPS + 4) \times T_{clk}$$
+
+For a 50 MHz FPGA clock and `FILTER_TAPS = 4`, the MCU should hold the Strobe/Enable signal for at least **160-200 ns** to ensure 100% reliable detection.
+
+## 📥 Implementation Example (Verilog)
+
+```verilog
+mcu_rx #(
+    .TIMEOUT_CYCLES(50_000_000), // 1 second @ 50MHz
+    .FILTER_TAPS(4)              // Aggressive glitch filtering
+) u_receiver (
+    .clk(hw_clk),
+    .rst(sys_rst),
+    .data_in(mcu_bus_8bit),
+    .data_en(mcu_strobe_pin),
+    // ... outputs
+);
