@@ -114,5 +114,6 @@ mcu_rx #(
  * Direct Ethernet support (without need for external mcu), W5100 / W5500 or similar
  * Evaluation of performance across multiple FPGA development boards
  * Recording of RF data to SD or USB mass media, directly on the board
+ * Sferics emulation
  * ...
  * Documentation and complete redesign of this site
