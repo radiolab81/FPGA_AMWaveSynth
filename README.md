@@ -1,5 +1,5 @@
 # FPGA_AMWaveSynth
-Vy first feasibility test of AMWaveSynth (https://github.com/radiolab81/AMWaveSynth) in verilog ... soon / later ... perhaps ... maybe
+Vy first feasibility test of AMWaveSynth (https://github.com/radiolab81/AMWaveSynth) in verilog
 
 ![alt text](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/1.png "Logo Title Text 1")
 
@@ -107,3 +107,12 @@ mcu_rx #(
     .data_en(mcu_strobe_pin),
     // ... outputs
 );
+```
+
+## Still to do:
+ * A more or less generalized `mcu_tx` demo for ESP32, STM32, and similar MCUs; perhaps a softcore version as well.
+ * Direct Ethernet support (without need for external mcu), W5100 / W5500 or similar
+ * Evaluation of performance across multiple FPGA development boards
+ * Recording of RF data to SD or USB mass media, directly on the board
+ * ...
+ * Documentation and complete redesign of this site
