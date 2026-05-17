@@ -70,7 +70,7 @@ The following simulation outputs captured from **GTKWave** verify the exact matc
 ### 1. Multi-Channel Frequency Control Initialization (`"FRQ"`)
 During the power-on boot sequence, `app_main` transmits the initial multi-channel DDS carrier parameters.
 
-![Multi-Channel Frequency Control Initialization](./images/screenshot1.png)
+![Multi-Channel Frequency Control Initialization](./images/FRQ_chunk.jpg)
 
 * **VCD Trace Catch**: The waveform captures the explicit sequential conversion layout of ASCII character markers `f`, `R`, and `Q`. 
 * **Data Inspection**: The underlying data buses correctly capture the Big-Endian transmission sequences for Channel 0 (Hex `03` `E9` `78` `D5`), Channel 1 (Hex `04` `64` `52` `D1`), and downstream profiles matching the target testbench parameters flawlessly.
@@ -78,7 +78,7 @@ During the power-on boot sequence, `app_main` transmits the initial multi-channe
 ### 2. Digital Gain & Preamplifier Updates (`"GAN"`)
 Directly following the channel configuration block, the code exercises target gain adjustments across the audio channels.
 
-![Digital Gain Updates](./images/screenshot2.png)
+![Digital Gain Updates](./images/GAN_chunk.jpg)
 
 * **VCD Trace Catch**: Captures successive `"GAN"` control headers followed by targeting identifiers.
 * **Verification**: Confirms exact variable distribution across specific registers (e.g., target `00` loading gain value `0100`, target `01` loading `1000`, and target `02` loading `4000`), matching precise attenuation controls.
@@ -86,7 +86,7 @@ Directly following the channel configuration block, the code exercises target ga
 ### 3. Continuous Multi-Channel Audio Stream Real-Time Runtime (`"AUD"`)
 Once execution enters the main real-time operational window, the system switches to highly repeating data packet transfers.
 
-![Continuous Multi-Channel Audio Stream](./images/screenshot3.png)
+![Continuous Multi-Channel Audio Stream](./images/AUD_chunk.jpg)
 
 * **VCD Trace Catch**: Captures the recurring `"AUD"` validation sequence firing at perfectly balanced 4 µs interval ticks.
 * **Glitch Elimination**: The zero-jitter parallel bit change transition validates the atomic structural assignment via the `GPIO` structure. No ghosting fragments or intermediate invalid data flags occur during execution loops.
