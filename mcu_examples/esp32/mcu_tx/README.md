@@ -62,6 +62,23 @@ idf.py build qemu --qemu-extra-args="-trace events=trace_events.txt,file=qemu_gp
 Because QEMU dumps trace events as standard line strings, a custom Python converter (`log_to_vcd.py`) intercepts the underlying register writes (`GPIO_OUT_REG`, `GPIO_OUT_W1TS_REG`, `GPIO_OUT_W1TC_REG`) and maps the relative sequencing blocks into highly compressed standard `.vcd` files ready to view.
 
 ---
+### 📋 Prerequisites for Linux (Debian 13 / Ubuntu)
+The pre-compiled QEMU binary provided by Espressif requires specific host shared libraries (like `libslirp`) to bypass environment validation errors during setup. 
+
+Before installing the toolchain extensions, ensure all native system dependencies are resolved:
+
+```bash
+# 1. Install missing network and emulation shared libraries
+sudo apt-get update
+sudo apt-get install -y libgcrypt20 libglib2.0-0 libpixman-1-0 libsdl2-2.0-0 libslirp0
+
+# 2. Trigger the official Espressif QEMU-Xtensa engine installation
+python3 \$IDF_PATH/tools/idf_tools.py install qemu-xtensa
+
+# 3. Refresh environment variables for your current terminal session
+. \$IDF_PATH/export.sh
+```
+
 
 ## 📊 Emulation Waveform Analysis
 
