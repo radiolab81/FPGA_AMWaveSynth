@@ -110,7 +110,7 @@ mcu_rx #(
 ```
 
 ## Still to do:
- * A more or less generalized `mcu_tx` demo for ESP32, STM32, and similar MCUs; perhaps a softcore version as well.
+ * A more or less generalized `mcu_tx` demo for ESP32 :white_check_mark: , STM32, and similar MCUs; perhaps a softcore version as well.
  * Direct Ethernet support (without need for external mcu), W5100 / W5500 or similar
  * Evaluation of performance across multiple FPGA development boards
  * Recording of RF data to SD or USB mass media, directly on the board
