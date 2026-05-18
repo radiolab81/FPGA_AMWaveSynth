@@ -1,6 +1,6 @@
 # ESP32 to FPGA Parallel Stream Interface
 
-This provides a EMI-hardened reference implementation for streaming multi-channel 8-bit PCM audio data from an ESP32 microcontroller to an FPGA or custom digital logic pipeline (e.g., Verilator testbenches) over an asynchronous parallel bus.
+This provides an EMI-hardened reference implementation for streaming multi-channel 8-bit PCM audio data from an ESP32 microcontroller to an FPGA or custom digital logic pipeline (e.g., Verilator testbenches) over an asynchronous parallel bus.
 
 The project demonstrates the complete engineering cycle: from bare-metal register optimizations on the ESP32 to virtual verification using **Espressif QEMU (`esp-develop-9.2.2`)**, trace logging parsing via Python into standard Value Change Dump (`.vcd`) formats, and waveform verification using GTKWave.
 
