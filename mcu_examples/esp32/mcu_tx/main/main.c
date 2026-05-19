@@ -9,6 +9,7 @@
 #include "soc/gpio_periph.h"
 #include "hal/gpio_ll.h"
 
+#include "esp_task_wdt.h"
 
 // --- PIN-MAPPING ---
 #define PIN_DATA_0  GPIO_NUM_13
@@ -26,6 +27,11 @@ const gpio_num_t data_pins[8] = {
     PIN_DATA_4, PIN_DATA_5, PIN_DATA_6, PIN_DATA_7
 };
 
+static inline void delay_ns(uint32_t ns) {
+    uint32_t start = esp_cpu_get_cycle_count();
+    uint32_t cycles = (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * ns) / 1000;
+    while ((esp_cpu_get_cycle_count() - start) < cycles);
+}
 
 // --- ATOMARE INTERFACE-FUNKTION ---
 // EMV-Version
@@ -50,20 +56,20 @@ void IRAM_ATTR send_to_fpga(uint8_t val) {
     GPIO.out1_w1tc.val = mask_high_clr;
     GPIO.out1_w1ts.val = mask_high_set;
 
-    // Mindestens 200 ns warten. esp_rom_delay_us(1) gibt uns 1000 ns Sicherheitspuffer für EMV.
-    esp_rom_delay_us(1); 
+    // Mindestens 200 ns warten.  
+    delay_ns(200);
 
     // --- SCHRITT 2: DATA_EN AKTIVIEREN (Steigende Flanke) ---
     GPIO.out_w1ts = (1ULL << PIN_DATA_EN);
     
-    // --- SCHRITT 3: PULS HALTEN (Entspricht den 20 Takten Glitch-Filter in der TB) ---
-    esp_rom_delay_us(1); 
+    // --- SCHRITT 3: PULS HALTEN (Entspricht den Takten im Glitch-Filter in der TB) ---
+    delay_ns(200);
 
     // --- SCHRITT 4: DATA_EN DEAKTIVIEREN (Fallende Flanke) ---
     GPIO.out_w1tc = (1ULL << PIN_DATA_EN);
     
     // --- SCHRITT 5: NACHLAUF (Gibt dem Glitch-Filter Zeit, auf Null zu fallen) ---
-    esp_rom_delay_us(1); 
+    delay_ns(200);
 }
 
 
@@ -93,13 +99,22 @@ void audio_task(void *pvParameters) {
     uint32_t phase_acc[10] = {0};
     uint32_t channel_freqs[10] = {440, 554, 659, 880, 1000, 1200, 1500, 2000, 2500, 3000};
     uint8_t current_samples[10];
+    
+    // Einmalige Registrierung dieses Tasks beim Watchdog
+    esp_task_wdt_add(NULL);
 
     // Mikrosekunden-basiertes Timing zur Umgehung von FreeRTOS-Tick-Problemen
     // Wir senden alle 2 ms ein Paket (500 Hz Paket-Rate)
-    const int64_t interval_us = 2000; 
+    //const int64_t interval_us = 2000; 
+    // Für echte 25 kHz Samplerate muss alle 40 Mikrosekunden ein Paket raus!
+    const int64_t interval_us = 40;
+
     int64_t next_wake_us = esp_timer_get_time() + interval_us;
 
     while(1) {
+        // Watchdog für diesen Task zurücksetzen
+        esp_task_wdt_reset();
+
         for(int i = 0; i < 10; i++) {
             phase_acc[i] += (channel_freqs[i] * 256) / SAMPLE_RATE_HZ;
             current_samples[i] = sine_lut[(phase_acc[i] >> 0) % 256];
@@ -116,10 +131,6 @@ void audio_task(void *pvParameters) {
         }
         next_wake_us += interval_us;
 
-        // WICHTIG FÜR DEN FREERTOS WATCHDOG:
-        // Ein ultrakurzer Yield (1 Tick Pause), damit das Betriebssystem im 
-        // Hintergrund seine Housekeeping-Aufgaben und das Watchdog-Feeding machen kann.
-        vTaskDelay(1); 
     }
 }
 
@@ -180,6 +191,17 @@ void app_main(void) {
     GPIO.out_w1tc = pin_mask;
     GPIO.out1_w1tc.val = (1ULL << (32-32)) | (1ULL << (33-32));
 
+    // Konfiguration für 6.1:
+    // Wir setzen idle_core_mask auf 0, um den Watchdog 
+    // für die IDLE-Tasks auf ALLEN Cores zu deaktivieren.
+    esp_task_wdt_config_t wdt_config = {
+        .timeout_ms = 10000,    // 10 Sekunden Puffer
+        .idle_core_mask = 0,    // WICHTIG: Keine Überwachung der Idle-Tasks
+        .trigger_panic = true,
+    };
+    
+    ESP_ERROR_CHECK(esp_task_wdt_reconfigure(&wdt_config));
+
     init_lut();
     printf("ESP32-Interface initialisiert. Starte FPGA-Konfiguration...\n");
 
@@ -190,6 +212,21 @@ void app_main(void) {
         0x0FE5890C, 0x19934566, 0x1999999A, 0x1FC7A163, 0x2889A027
     };
     
+    /* Neue Frequenzen: LW (153, 171, 225) und diverse MW Sender
+    uint32_t my_freqs[10] = {
+        0x03E978D5, // CH0: 153 kHz
+        0x046452D1, // CH1: 171 kHz
+        0x05C8500D, // CH2: 225 kHz
+        0x2467C924, // CH3: 1422 kHz
+        0x24DD2F1B, // CH4: 1440 kHz
+        0x0FE5890C, // CH5: 621 kHz
+        0x19934566, // CH6: 999 kHz
+        0x1999999A, // CH7: 1000 kHz
+        0x1FC7A163, // CH8: 1242 kHz
+        0x2889A027  // CH9: 1584 kHz
+    };
+    */
+
     // Einmalig Frequenzen an das FPGA übertragen
     send_frequency_packet(my_freqs);
 
