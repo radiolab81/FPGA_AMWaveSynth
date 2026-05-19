@@ -42,7 +42,7 @@ void IRAM_ATTR send_to_fpga(uint8_t val) {
     if (val & 0x10) mask_low_set  |= (1 << PIN_DATA_4); else mask_low_clr  |= (1 << PIN_DATA_4);
     if (val & 0x20) mask_high_set |= (1 << (PIN_DATA_5 - 32)); else mask_high_clr |= (1 << (PIN_DATA_5 - 32));
     if (val & 0x40) mask_high_set |= (1 << (PIN_DATA_6 - 32)); else mask_high_clr |= (1 << (PIN_DATA_6 - 32));
-    if (val & 0x80) mask_low_set  |= (1 << PIN_DATA_EN); else mask_low_clr  |= (1 << PIN_DATA_EN);
+    if (val & 0x80) mask_low_set  |= (1 << PIN_DATA_7); else mask_low_clr  |= (1 << PIN_DATA_7);
 
     // --- SCHRITT 1: DATEN ANLEGEN & STROBE AUF 0 (Entspricht Vorlauf der Testbench) ---
     GPIO.out_w1tc = mask_low_clr | (1ULL << PIN_DATA_EN);
