@@ -35,14 +35,14 @@ void IRAM_ATTR send_to_fpga(uint8_t val) {
     uint32_t mask_high_set = 0;  uint32_t mask_high_clr = 0;
 
     // Bit-Mapping auf die Hardware-Bänke
-    if (val & 0x01) mask_low_set  |= (1 << 13); else mask_low_clr  |= (1 << 13);
-    if (val & 0x02) mask_low_set  |= (1 << 14); else mask_low_clr  |= (1 << 14);
-    if (val & 0x04) mask_low_set  |= (1 << 27); else mask_low_clr  |= (1 << 27);
-    if (val & 0x08) mask_low_set  |= (1 << 26); else mask_low_clr  |= (1 << 26);
-    if (val & 0x10) mask_low_set  |= (1 << 25); else mask_low_clr  |= (1 << 25);
-    if (val & 0x20) mask_high_set |= (1 << (33 - 32)); else mask_high_clr |= (1 << (33 - 32));
-    if (val & 0x40) mask_high_set |= (1 << (32 - 32)); else mask_high_clr |= (1 << (32 - 32));
-    if (val & 0x80) mask_low_set  |= (1 << 19); else mask_low_clr  |= (1 << 19);
+    if (val & 0x01) mask_low_set  |= (1 << PIN_DATA_0); else mask_low_clr  |= (1 << PIN_DATA_0);
+    if (val & 0x02) mask_low_set  |= (1 << PIN_DATA_1); else mask_low_clr  |= (1 << PIN_DATA_1);
+    if (val & 0x04) mask_low_set  |= (1 << PIN_DATA_2); else mask_low_clr  |= (1 << PIN_DATA_2);
+    if (val & 0x08) mask_low_set  |= (1 << PIN_DATA_3); else mask_low_clr  |= (1 << PIN_DATA_3);
+    if (val & 0x10) mask_low_set  |= (1 << PIN_DATA_4); else mask_low_clr  |= (1 << PIN_DATA_4);
+    if (val & 0x20) mask_high_set |= (1 << (PIN_DATA_5 - 32)); else mask_high_clr |= (1 << (PIN_DATA_5 - 32));
+    if (val & 0x40) mask_high_set |= (1 << (PIN_DATA_6 - 32)); else mask_high_clr |= (1 << (PIN_DATA_6 - 32));
+    if (val & 0x80) mask_low_set  |= (1 << PIN_DATA_EN); else mask_low_clr  |= (1 << PIN_DATA_EN);
 
     // --- SCHRITT 1: DATEN ANLEGEN & STROBE AUF 0 (Entspricht Vorlauf der Testbench) ---
     GPIO.out_w1tc = mask_low_clr | (1ULL << PIN_DATA_EN);
