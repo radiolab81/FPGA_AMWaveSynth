@@ -8,7 +8,7 @@ The project demonstrates the complete engineering cycle: from bare-metal registe
 
 * **Multi-Channel Streaming**: Continuous 25 kHz streaming of 10 independent audio channels (8-bit PCM) alongside configuration command routing.
 * **Atomic Bit-Slicing**: Avoids slow pin-by-pin execution loops by driving the ESP32 hardware register structures (`GPIO.out_w1ts` / `GPIO.out_w1tc`) simultaneously across Bank 0 and Bank 1.
-* **EMI & Jumper-Wire Hardened**: Implements precise 1 µs Setup, Strobe, and Hold phase profiles via hardware-inlined delays (`esp_rom_delay_us`), matching real-world transmission requirements over loose prototyping wiring.
+* **EMI & Jumper-Wire Hardened**: Implements precise ns Setup, Strobe, and Hold phase profiles via hardware-inlined delays (`esp_cpu_get_cycle_count`), matching real-world transmission requirements over loose prototyping wiring.
 * **Dual-Core Architecture**: Isolates the time-critical audio synthesizer pipeline entirely on ESP32 **Core 1** using FreeRTOS task pinning to completely eliminate kernel scheduler jitter.
 * **Virtual Verification Stack**: Fully verified without physical hardware by intercepting QEMU memory operations mapping (`memory_region_ops_write`) and translating raw logs into pristine `.vcd` trace files.
 
@@ -26,12 +26,12 @@ DATA_BUS       |    Gültige Daten  |
                      +-------+
 PIN_DATA_EN          |       |  (Trigger Rising-Edge)
         -------------+       +-------------
-        <- 1µs Setup ->- 1µs ->- 1µs Hold ->
+        < -200ns ->   -200ns -> -200ns Hold ->
 ```
 
-1. **Setup Phase (1 µs)**: The 8-bit data is driven onto the bus while the Strobe line stays explicitly at `0`. This allows the parasitics and capacitance of standard jumper wires to settle down completely.
-2. **Strobe Phase (1 µs)**: `PIN_DATA_EN` pulses high. On the receiving FPGA end, this signal travels safely through a 3-FF metastable synchronizer and a 4-tap digital glitch filter, triggering the protocol Finite State Machine (FSM) reliably.
-3. **Hold Phase (1 µs)**: `PIN_DATA_EN` drops low while the driven state stays locked on the bus, ensuring zero hold-time violations internally inside the sync logic of the FPGA module.
+1. **Setup Phase (200 ns)**: The 8-bit data is driven onto the bus while the Strobe line stays explicitly at `0`. This allows the parasitics and capacitance of standard jumper wires to settle down completely.
+2. **Strobe Phase (200 ns)**: `PIN_DATA_EN` pulses high. On the receiving FPGA end, this signal travels safely through a 3-FF metastable synchronizer and a 4-tap digital glitch filter, triggering the protocol Finite State Machine (FSM) reliably.
+3. **Hold Phase (200 ns)**: `PIN_DATA_EN` drops low while the driven state stays locked on the bus, ensuring zero hold-time violations internally inside the sync logic of the FPGA module.
 
 ### Framing Protocols (Layer 2)
 
@@ -105,6 +105,6 @@ Once execution enters the main real-time operational window, the system switches
 
 ![Continuous Multi-Channel Audio Stream](./images/AUD_chunk.jpg)
 
-* **VCD Trace Catch**: Captures the recurring `"AUD"` validation sequence firing at perfectly balanced 4 µs interval ticks.
+* **VCD Trace Catch**: Captures the recurring `"AUD"` validation sequence firing at perfectly balanced interval ticks.
 * **Glitch Elimination**: The zero-jitter parallel bit change transition validates the atomic structural assignment via the `GPIO` structure. No ghosting fragments or intermediate invalid data flags occur during execution loops.
 * **Audio Synthesis Verification**: The consecutive payload byte arrays show true arithmetic step progressions coming out of the dual-core 16-bit fixed-point phase accumulator, ensuring glitch-free playback streams on the analog modulator outputs.
