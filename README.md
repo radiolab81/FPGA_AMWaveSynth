@@ -4,7 +4,7 @@
 
 An ultra-portable, massively scalable, full-stack Software-Defined Radio (SDR) Amplitude Modulation transmitter ecosystem. This repository contains the hardware-accelerated DSP core written in portable Verilog, an embedded ESP32 control bridge, and a responsive Python-based GUI for real-time station management.
 
-By shifting from a pure software architecture to custom hardware pipelines, **AMWaveSynth** can synthesize up to hundreds of AM channels simultaneously, effectively replicating entire medium- and long-wave bands on a single low-cost chip.
+By shifting from a pure software architecture (https://github.com/radiolab81/AMWaveSynth) to custom hardware pipelines, **FPGA_AMWaveSynth** can synthesize up to hundreds of AM channels simultaneously, effectively replicating entire medium- and long-wave bands on a single low-cost chip.
 
 ---
 
