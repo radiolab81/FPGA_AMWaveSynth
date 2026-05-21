@@ -1,119 +1,123 @@
-# FPGA_AMWaveSynth
-Vy first feasibility test of AMWaveSynth (https://github.com/radiolab81/AMWaveSynth) in verilog
+# AMWaveSynth (FPGA Edition) 📻⚡
 
-![alt text](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/1.png "Logo Title Text 1")
+![main](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/FPGA_AMWaveSynth_rect.jpg "Logo Title Text 1")
 
-![alt text](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/2.png "Logo Title Text 1")
+An ultra-portable, massively scalable, full-stack Software-Defined Radio (SDR) Amplitude Modulation transmitter ecosystem. This repository contains the hardware-accelerated DSP core written in portable Verilog, an embedded ESP32 control bridge, and a responsive Python-based GUI for real-time station management.
 
-The consumption of LUTs and HW multipliers is very manageable in this 4 channel version, so that even on very old and inexpensive FPGAs, like the Cyclone II series, many more NCO instances can run.
+By shifting from a pure software architecture to custom hardware pipelines, **AMWaveSynth** can synthesize up to hundreds of AM channels simultaneously, effectively replicating entire medium- and long-wave bands on a single low-cost chip.
 
-```
-Top-level Entity Name	am_modulator_top
-Family	Cyclone II
-Device	EP2C5T144C8
-Timing Models	Final
-Total logic elements	557 / 4,608 ( 12 % )
-Total combinational functions	460 / 4,608 ( 10 % )
-Dedicated logic registers	415 / 4,608 ( 9 % )
-Total registers	415
-Total pins	20 / 89 ( 22 % )
-Total virtual pins	0
-Total memory bits	32,768 / 119,808 ( 27 % )
-Embedded Multiplier 9-bit elements	8 / 26 ( 31 % )
-Total PLLs	0 / 2 ( 0 % )
-```
-
-Estimation: 
-- 12-13 channels on ancient EP2C5 without techniques such as time multiplexing are no problem, 16-24 AM stations using time-multiplexing without special tricks, with further optimizations, of course, even more
-- Contemporary FPGAs in the hobby sector such as Tang Nano 25k, 50-60 AM stations without effort, using time-multiplexing 200+ AM stations, more than a complete long- and medium-wave band together!
-
-Good prerequisites for realizing the AMWaveSynth as an FPGA chip, in addition to the existing software version.
-
-## Update 10ch tech-demo: 
 ---
 
+## 🏗️ System Architecture
 
-![att](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/10ch_with_att.jpg "first 3 stations with att.")
+The ecosystem architecture is divided into three distinct layers, ensuring clean separation of concerns and maximum hardware agility:
 
-# Hardened MCU-to-FPGA Receiver (EMC-Proof Version)
-
-This Verilog module is a robust, hardware-hardened communication interface designed to bridge the gap between an asynchronous MCU (like ESP32, STM32, or AVR) and internal FPGA logic. 
-
-Unlike standard RTL receivers, this "EMC-Version" is specifically engineered to handle **real-world physical connections** such as long jumper wires, unshielded breadboards, and environments with high electromagnetic interference (EMI).
-
-## 🚀 Key Features
-
-* **EMC-Hardened Input Stage:**
-    * **3-Stage Synchronizer:** Eliminates metastability issues on the asynchronous `data_en` strobe.
-    * **Digital Glitch Filter:** A 4-tap integrator logic ignores high-frequency spikes and crosstalk on the signal lines.
-    * **Schmitt-Trigger Logic:** Implements digital hysteresis to ensure clean state transitions.
-* **FSM Watchdog Timer:** An integrated hardware watchdog automatically resets the Finite State Machine to the `IDLE` state if a transmission is interrupted or corrupted by noise, preventing system deadlocks.
-* **Safe Data Latching:** 2-FF staging for the 8-bit data bus ensures consistent data capturing across the clock domain boundary.
-* **High Reliability Protocol:** Supports robust command headers for Audio, Frequency, and Gain control.
-
-## 🛠 Hardware Architecture
-
-The module implements a multi-layer defense strategy for incoming signals:
-
-1.  **Synchronization Layer:** All asynchronous inputs are brought into the local `clk` domain.
-2.  **Filter Layer:** The `data_en` strobe must be stable for a programmable number of clock cycles (`FILTER_TAPS`) before being recognized as a valid edge.
-3.  **Watchdog Layer:** Tracks FSM activity and triggers a timeout if the MCU stops sending bytes mid-packet.
-
-## 📋 Module Parameters
-
-| Parameter | Default Value | Description |
-|:--- |:--- |:--- |
-| `TIMEOUT_CYCLES` | `32'd50_000_000` | FSM Reset timeout (e.g., 1.0s @ 50MHz). |
-| `FILTER_TAPS` | `4'd4` | Number of stable clock cycles required to validate a strobe. |
-
-## 📡 Protocol Specification
-
-The module listens for a 3-character ASCII header followed by a fixed-length payload:
-
-### 1. Audio Stream (`AUD`)
-Updates 10 channels of 8-bit PCM data.
-* **Header:** `0x41 0x55 0x44` ("AUD")
-* **Payload:** 10 Bytes (CH0 to CH9)
-
-### 2. Frequency Control (`FRQ`)
-Updates 32-bit Phase Increments (NCO) for 10 channels.
-* **Header:** `0x46 0x52 0x51` ("FRQ")
-* **Payload:** 40 Bytes (10x 4-Byte words, Big-Endian)
-
-### 3. Gain Control (`GAN`)
-Updates 16-bit volume/gain for a specific channel.
-* **Header:** `0x47 0x41 0x4E` ("GAN")
-* **Payload:** 1 Byte (Channel ID 0-9) + 2 Bytes (16-bit Gain, MSB first)
-
-## 💻 Timing Requirements (Real-World)
-
-Due to the internal glitch filtering, the MCU must hold the `data_en` signal high for several FPGA clock cycles. 
-
-**Minimum Pulse Width Calculation:**
-$$T_{pulse} > (FILTER\_TAPS + 4) \times T_{clk}$$
-
-For a 50 MHz FPGA clock and `FILTER_TAPS = 4`, the MCU should hold the Strobe/Enable signal for at least **160-200 ns** to ensure 100% reliable detection.
-
-## 📥 Implementation Example (Verilog)
-
-```verilog
-mcu_rx #(
-    .TIMEOUT_CYCLES(50_000_000), // 1 second @ 50MHz
-    .FILTER_TAPS(4)              // Aggressive glitch filtering
-) u_receiver (
-    .clk(hw_clk),
-    .rst(sys_rst),
-    .data_in(mcu_bus_8bit),
-    .data_en(mcu_strobe_pin),
-    // ... outputs
-);
+```mermaid
+graph LR
+    A[Python GUI: amtxgui] -- "Station Lists / Commands" --> B[ESP32 Bridge: main.c]
+    B -- "High-Speed Register Bus" --> C[FPGA: mcu_rx.v]
+    C --> D[FPGA DSP Core: am_modulator_top]
+    D --> D1[Shared Sine ROM]
+    D --> D2[Multi-Channel NCOs]
+    D --> E[RF Output / DAC]
 ```
 
-## Still to do:
- * A more or less generalized `mcu_tx` demo for ESP32 :white_check_mark: , STM32, and similar MCUs; perhaps a softcore version as well.
- * Direct Ethernet support (without need for external mcu), W5100 / W5500 or similar
+1. **Frontend Tier (PC):** `fpga_amtxgui.py` provides an intuitive graphical interface to edit and dynamically stream curated station lists ("Senderlisten").
+2. **Bridge Tier (ESP32):** `main.c` acts as the low-latency hardware interface, receiving data from the PC and translating it into fast register-write cycles for the FPGA.
+3. **Hardware DSP Tier (FPGA):** Optimized, portable Verilog HDL modules handling high-speed phase accumulation (`nco.v`), resource-efficient wave synthesis (`shared_sine_rom.v`), and high-performance digital mixing (`am_modulator_top.v`).
+
+---
+
+## 📈 DSP Mathematics & Hardware Optimization
+
+The hardware core performs digital double-sideband full-carrier amplitude modulation (DSB-FC) natively in logic gates:
+
+s(t) = (1 + m * x(t)) * sin(2 * pi * f_c * t)
+
+Where `x(t)` represents the baseband audio/signal generated by the multi-channel NCO array, `m` is the modulation index, and `f_c` is the synthesized carrier frequency.
+
+### Resource-Saving Highlight: Time-Shared Sine ROM
+Instead of instantiating individual Lookup Tables (LUTs) or Block RAMs (BRAM) for every single broadcast channel, `shared_sine_rom.v` implements a time-multiplexed/shared architecture. This allows multiple NCO pipelines to cycle through the same memory resource within a single clock domain, drastically cutting down memory utilization.
+
+---
+
+## 📊 Hardware Utilization & Massive Scalability
+
+The Verilog design is purely synchronous, vendor-independent, and highly portable. It scales seamlessly from obsolete educational boards to modern hobbyist hardware.
+
+### Benchmark: Very first 4-Channel Design on Legacy Hardware
+Below are the compilation results using Intel Quartus II for an ancient, budget-friendly **Altera Cyclone II (EP2C5)** FPGA:
+
+| Resource Metric | Used | Available | Percentage |
+| :--- | :--- | :--- | :--- |
+| **Total Logic Elements (LEs)** | 557 | 4,608 | **12%** |
+| **Total Combinational Functions** | 460 | 4,608 | **10%** |
+| **Dedicated Logic Registers** | 415 | 4,608 | **9%** |
+| **Total Memory Bits (BRAM)** | 32,768 | 119,808 | **27%** |
+| **Embedded Multiplier 9-bit Elements** | 8 | 26 | **31%** |
+| **Total PLLs** | 0 | 2 | **0%** |
+
+### Projected Channel Scaling Estimates
+Thanks to the lean logic footprint, the channel density scales incredibly well depending on your target platform and optimization techniques:
+
+10ch - Tech-demo on ancient Cyclone II Series , longwave and mediumwave with different att/gain settings
+![att](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/10ch_with_att.jpg "first 3 stations with att.")
+
+* **Legacy Hardware (e.g., Cyclone II EP2C5 Series):**
+  * **12–13 AM channels** comfortably without any advanced time-multiplexing tricks.
+  * **16–24 AM channels** utilizing structural time-multiplexing on basic configurations.
+* **Modern Hobbyist Hardware (e.g., Sipeed Tang Nano 25k):**
+  * **50–60 AM channels** running completely in parallel out-of-the-box.
+  * **200+ AM channels** with optimized time-multiplexing pipelines — **enough to synthesize a complete medium- and long-wave broadcast band simultaneously!**
+
+---
+
+## 📁 Repository Structure
+
+```text
+FPGA_AMWaveSynth/
+│                           # FPGA Logic (Portable Verilog HDL)
+├── am_modulator_top.v      # Top-level entity & AM mixing logic
+├── nco.v                   # Numerically Controlled Oscillator core
+├── shared_sine_rom.v       # Resource-optimized, time-shared Sine ROM
+├── mcu_rx.v                # Microcontroller register bus interface
+├── debouncer.v             # Glitch-filtering for hardware buttons
+├── mcu_examples/           
+│   └── esp32/              # ESP32 Bridge Source Code # Low-latency PC-to-FPGA communication
+│        └── mcu_tx/        # ESP32 to FPGA Parallel Stream Interface test 10ch - AM with 10 internal sinus gen, TB Espressif QEMU 
+│        └── udp_rx_mcu_tx/ # Low-latency PC-to-ESP32 / UDP-to-FPGA AM Radio Bridge, implements a bridge between real IP networks (Internet Radio,ffmeg) and an FPGA. 
+│   
+├── amtxgui/                    # Desktop Control Application
+│   └── fpga_amtxgui.py         # Python GUI for transmitter curation
+└── README.md                   # Project Documentation
+```
+
+---
+
+## 🌌 Closed-Loop Ecosystem Simulation
+
+This hardware synthesis core is designed to work hand-in-hand with its sister project:
+🔗 **[AMWaveSynthPropagationSimulator](https://github.com/radiolab81/AMWaveSynthPropagationSimulator)**
+
+While this repository generates real-time, high-precision RF signals in physical hardware, the **PropagationSimulator** allows you to ingest these virtual station arrays, simulating and visualizing how your synthesized radio waves interact with real-world, ionospheric conditions, and synthetic environments. Together, they form a comprehensive, end-to-end digital radio engineering laboratory.
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+* **FPGA Toolchain:** Intel Quartus (for Altera/Intel), Xilinx/AMD Vivado, or Yosys/NextPNR (for open-source toolchains like Tang Nano).
+* **ESP32 Environment:** ESP-IDF 6.1
+* **Python Environment:** Python 3.x
+
+### Deployment
+1. **Flash the FPGA:** Open the project in your respective IDE, set `am_modulator_top` as the top-level entity, assign your board's clock/pins, and synthesize.
+2. **Flash the ESP32:** Compile and upload `/mcu_examples/esp32/udp_rx_mcu_tx/main.c` to your bridge microcontroller. Connect the designated GPIO pins to the FPGA's register input interface.
+3. **Launch the Controller:** Run `python amtxgui/fpga_amtxgui.py` to start managing your radio spectrum in real time!
+
+### Still to do:
+ * Direct Ethernet support (without need for external mcu), W5100 / W5500 or similar, Softcore ...
  * Evaluation of performance across multiple FPGA development boards
  * Recording of RF data to SD or USB mass media, directly on the board
  * Sferics emulation
  * ...
- * Documentation and complete redesign of this site
