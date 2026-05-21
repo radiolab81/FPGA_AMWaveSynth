@@ -99,7 +99,7 @@ FPGA_AMWaveSynth/
 This hardware synthesis core is designed to work hand-in-hand with its sister project:
 🔗 **[AMWaveSynthPropagationSimulator](https://github.com/radiolab81/AMWaveSynthPropagationSimulator)**
 
-While this repository generates real-time, high-precision RF signals in physical hardware, the **PropagationSimulator** allows you to ingest these virtual station arrays, simulating and visualizing how your synthesized radio waves interact with real-world, ionospheric conditions, and synthetic environments. Together, they form a comprehensive, end-to-end digital radio engineering laboratory.
+While this repository generates real-time, high-precision RF signals in physical hardware, the **PropagationSimulator** allows you to ingest these virtual station arrays, simulating and visualizing how your synthesized radio waves interact with real-world, ionospheric conditions, and synthetic environments. Together, they form a comprehensive, end-to-end digital radio engineering laboratory. Whether you are an enthusiast of vintage radios wanting to experience authentic wave propagation at different times of day, wish to test real RF hardware within a virtual environment, or want to practice DFing NDBs and radio stations — the interplay of both projects offers the ideal solution.
 
 ---
 
