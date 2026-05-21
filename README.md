@@ -117,6 +117,7 @@ While this repository generates real-time, high-precision RF signals in physical
 3. **Launch the Controller:** Run `python amtxgui/fpga_amtxgui.py` to start managing your radio spectrum in real time!
 
 ### Still to do:
+ * Other mcu bridges  ...
  * Direct Ethernet support (without need for external mcu), W5100 / W5500 or similar, Softcore ...
  * Evaluation of performance across multiple FPGA development boards
  * Recording of RF data to SD or USB mass media, directly on the board
