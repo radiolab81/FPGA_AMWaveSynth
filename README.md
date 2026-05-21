@@ -23,6 +23,7 @@ graph LR
 ```
 
 1. **Frontend Tier (PC):** `fpga_amtxgui.py` provides an intuitive graphical interface to edit and dynamically stream curated station lists ("Senderlisten").
+![amtxgui](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/fpga_amtxgui.jpg "Logo Title Text 1")
 2. **Bridge Tier (ESP32):** `main.c` acts as the low-latency hardware interface, receiving data from the PC and translating it into fast register-write cycles for the FPGA.
 3. **Hardware DSP Tier (FPGA):** Optimized, portable Verilog HDL modules handling high-speed phase accumulation (`nco.v`), resource-efficient wave synthesis (`shared_sine_rom.v`), and high-performance digital mixing (`am_modulator_top.v`).
 
