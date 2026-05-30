@@ -83,6 +83,7 @@ FPGA_AMWaveSynth/
 ├── shared_sine_rom.v       # Resource-optimized, time-shared Sine ROM
 ├── mcu_rx.v                # Microcontroller register bus interface
 ├── debouncer.v             # Glitch-filtering for hardware buttons
+├── TDM/                    # TDM version of top/nco/mcu module
 ├── mcu_examples/           
 │   └── esp32/              # ESP32 Bridge Source Code # Low-latency PC-to-FPGA communication
 │        └── mcu_tx/        # ESP32 to FPGA Parallel Stream Interface test 10ch - AM with 10 internal sinus gen, TB Espressif QEMU 
