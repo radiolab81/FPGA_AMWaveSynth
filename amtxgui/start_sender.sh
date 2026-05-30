@@ -6,9 +6,22 @@ SDR_IP="192.168.1.141"
 SDR_CONTROL_PORT="5000"
 # ************ SDR Settings ******************
 
+# Prüfung auf erforderliche Programme
+MISSING=()
+for cmd in ffmpeg nc bc; do
+    if ! command -v "$cmd" &> /dev/null; then
+        MISSING+=("$cmd")
+    fi
+done
+
+if [ ${#MISSING[@]} -ne 0 ]; then
+    echo "FEHLER: Die folgenden Programme sind nicht installiert: ${MISSING[*]}"
+    echo "Bitte installiere sie zuerst und starte das Script neu."
+    exit 1
+fi
+
 MOD_ARGS=""
 NC_CMD="" # Variable für den Netcat-String
-
 
 # Wir verarbeiten die Argumente in 4er-Blöcken (Freq, BW, URL, Port)
 while (( "$#" >= 4 )); do
