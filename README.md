@@ -66,8 +66,10 @@ Thanks to the lean logic footprint, the channel density scales incredibly well d
 
 * **Legacy Hardware (e.g., Cyclone II EP2C5 Series):**
   * **10–13 AM channels** comfortably without any advanced time-multiplexing tricks.
-  * **16–24 AM channels** utilizing structural time-multiplexing on basic configurations.
-
+  * **16–40 AM channels** utilizing structural time-multiplexing on basic configurations.
+    
+   ![att2](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/40ch.jpg "40 AM stations.")
+  
     See: https://github.com/radiolab81/FPGA_AMWaveSynth/tree/main/TDM
 * **Modern Hobbyist Hardware (e.g., Sipeed Tang Nano 25k):**
   * **50–60 AM channels** running completely in parallel out-of-the-box.
