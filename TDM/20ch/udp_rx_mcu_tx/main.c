@@ -136,7 +136,7 @@ void send_frequency_packet(const uint32_t freqs[20]) {
 }
 
 void send_gain_update(uint8_t channel, uint16_t gain) {
-    if (channel > 9) return;
+    if (channel > 19) return;
     send_to_fpga('G');
     send_to_fpga('A');
     send_to_fpga('N');
