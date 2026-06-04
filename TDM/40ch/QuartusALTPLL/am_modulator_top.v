@@ -224,8 +224,8 @@ module am_modulator_top #(
             if (slot == 4'd9) begin // [ÄNDERUNG: Trigger bei Slot 9]
                 // 1. DAC Output aktualisieren (Mit 22-Bit MSB Logik)
                 // [ÄNDERUNG: Indizierung an 22-Bit Akkumulator angepasst]
-                // dac_out <= {~accumulator[21], accumulator[20:21-(OUT_BITS-1)]};
-                dac_out <= {~accumulator[21], accumulator[20:22-OUT_BITS]};
+                dac_out <= {~accumulator[21], accumulator[20:21-(OUT_BITS-1)]};
+                
                 // 2. Akkumulator direkt mit dem ersten frischen Quad-Paar neu laden 
                 accumulator <= $signed(current_quad_sum);
             end else begin 
