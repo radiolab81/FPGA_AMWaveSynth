@@ -1,7 +1,7 @@
 
 This version utilizes Time-Division Multiplexing to further scale the channels and reduce the consumption of hardware multipliers and LUTs.
 
-Comparison of a 10-channel version on a very old and small EP2C5:
+### Comparison of a 10-channel version on a very old and small EP2C5:
 
 
 | Resource / Parameter | Fully Parallel NCO Processing | Semi-Parallel / TDM NCO Cores | Resource Savings |
@@ -16,7 +16,15 @@ Comparison of a 10-channel version on a very old and small EP2C5:
 | **Total virtual pins** | 0 | 0 | Unchanged |
 | **Total PLLs** | 0 / 2 (0 %) | 0 / 2 (0 %) | Unchanged |
 
-Comparison of a 20 vs 40 channel version on a very old and small EP2C5:
+
+
+### Comparison of a 20 vs 40 channel version on a very old and small EP2C5:
+
+ 
+ ![20ch](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/20ch.jpg "20 AM stations.")
+
+ ![40ch](https://github.com/radiolab81/FPGA_AMWaveSynth/blob/main/www/40ch.jpg "40 AM stations.")
+ 
 | Resource / Parameter | 20ch Semi-Parallel TDM NCO Processing, separate core mem, 5 TDM slots  | 40ch Semi-Parallel TDM NCO Cores using PLL, 10 TDM slots |
 | :--- | :---: | :---: | 
 | **Total logic elements**	| 2,564 / 4,608 ( 56 % ) | 3,981 / 4,608 ( 86 % )
