@@ -30,13 +30,20 @@ while (( "$#" >= 4 )); do
     URL=$3
     PORT=$4
     
-    echo "Starte ffmpeg Instanz: $FREQ kHz | BW: $BW kHz | Port: $PORT"
+    # Prüfen, ob der Wert unter 50.000 liegt (dann ist es kHz)
+    if [ "$FREQ" -lt 50000 ]; then
+        FREQ_HZ=$((FREQ * 1000))
+    else
+        FREQ_HZ=$FREQ
+    fi
+    
+    echo "Starte ffmpeg Instanz: $FREQ (-> $FREQ_HZ Hz) | BW: $BW Hz | Port: $PORT"
    
     # ffmpeg -i "$URL" -af "lowpass=f=${BW}000" -f mpegts udp://127.0.0.1:$PORT &
     ffmpeg -stream_loop -1 -re -i "$URL" -af "lowpass=f=${BW}, volume=0.8, acompressor=threshold=-10dB:ratio=4"   -f u8 -ar 25000 -ac 1 udp://$SDR_IP:$PORT &  
 
     # Daten für Netcat im Format "port:frequenz_in_hz" anhängen
-    freq_hz=$(echo "$FREQ * 1000" | bc | cut -d'.' -f1)
+    freq_hz=$(echo "$FREQ_HZ" | bc | cut -d'.' -f1)
 
     if [ -z "$NC_CMD" ]; then
         NC_CMD="${PORT}:${freq_hz}"
